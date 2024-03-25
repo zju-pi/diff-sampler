@@ -83,7 +83,7 @@ python fid.py calc --images=path/to/images --ref=path/to/fid/stat
 
 
 ## Pre-trained AMED Predictors
-For CIFAR-10, FFHQ64 and ImageNet64, we provide our [pre-trained AMED predictors](https://drive.google.com/drive/folders/1KlS0mV3qKMBu1qghy9sXRrjL2Aic4_fN) for AMED-Solver and AMED-Plugin on iPNDM solver for direct sampling. The folder name are organized as '\<exp_num\>-\<dataset_name\>-\<num_steps\>-\<NFE\>-\<student\>-\<teacher\>-\<M\>-\<shcedule\>-\<afs\>'.
+For CIFAR-10, FFHQ64 and ImageNet64, we provide our [pre-trained AMED predictors](https://drive.google.com/drive/folders/1KlS0mV3qKMBu1qghy9sXRrjL2Aic4_fN) for AMED-Solver and AMED-Plugin on iPNDM solver for direct sampling. The folder name are organized as '\<exp_num\>-\<dataset_name\>-\<num_steps\>-\<NFE\>-\<student\>-\<teacher\>-\<M\>-\<shcedule\>-\<afs\>'. You can put these folders under `./exp/` and run the sampling script above with the experiment order to perform accelerated sampling.
 
 ## Pre-trained Diffusion Models
 We perform sampling on a variaty of pre-trained diffusion models from different codebases including
