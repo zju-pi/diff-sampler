@@ -729,7 +729,7 @@ def unipc_sampler(
         d_next = x_next / ((1 + t_steps[0]**2).sqrt())
         denoised = x_next - t_steps[0] * d_next
     else:
-        denoised = get_denoised(net, x_cur, t_steps[0], class_labels=class_labels, condition=condition, unconditional_condition=unconditional_condition)
+        denoised = get_denoised(net, x_next, t_steps[0], class_labels=class_labels, condition=condition, unconditional_condition=unconditional_condition)
         d_next = (x_next - denoised) / t_steps[0]
     buffer_model = [dynamic_thresholding_fn(denoised)] if predict_x0 else [d_next]
     buffer_t = [t_steps[0]]
@@ -740,8 +740,7 @@ def unipc_sampler(
             order = i + 1
             use_corrector = True
             x_next, model_out = unipc_update(x_cur, buffer_model, buffer_t, t_next, order, \
-                                              net=net, class_labels=class_labels, guidance=guidance, \
-                                              guidance_rate=guidance_rate, use_corrector=use_corrector, \
+                                              net=net, class_labels=class_labels, use_corrector=use_corrector, \
                                               predict_x0=predict_x0, variant=variant, **kwargs)
             buffer_model.append(model_out)
             buffer_t.append(t_next)
@@ -749,8 +748,7 @@ def unipc_sampler(
             order = min(max_order, num_steps - i - 1) if lower_order_final else max_order
             use_corrector = False if i == num_steps - 2 else True
             x_next, model_out = unipc_update(x_cur, buffer_model, buffer_t, t_next, order, \
-                                              net=net, class_labels=class_labels, guidance=guidance, \
-                                              guidance_rate=guidance_rate, use_corrector=use_corrector, \
+                                              net=net, class_labels=class_labels, use_corrector=use_corrector, \
                                               predict_x0=predict_x0, variant=variant, **kwargs)
             for k in range(max_order - 1):
                 buffer_model[k] = buffer_model[k + 1]
