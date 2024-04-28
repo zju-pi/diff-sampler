@@ -238,22 +238,6 @@ class ImageFolderDataset(Dataset):
                 image = np.array(PIL.Image.open(f))
         if image.ndim == 2:
             image = image[:, :, np.newaxis] # HW => HWC
-            # image = np.repeat(image, 3, axis=2)       # for coco
-            
-        # # for coco: 中心裁剪
-        # h, w = image.shape[:2]
-        # min_dim = min(h, w)
-        # start_h = (h - min_dim) // 2
-        # start_w = (w - min_dim) // 2
-        # image = image[start_h:start_h+min_dim, start_w:start_w+min_dim, :]
-
-        # # # 调整大小为256x256像素
-        # transform = transforms.Compose([
-        #     transforms.ToPILImage(),
-        #     transforms.Resize((256, 256)),
-        #     transforms.ToTensor()
-        #     ])
-        # image = transform(image).numpy().astype(np.uint8)
             
         image = image.transpose(2, 0, 1) # HWC => CHW
         return image
