@@ -1,16 +1,14 @@
 # diff-sampler
-diff-sampler is an open source toolbox for fast sampling from diffusion models. This repository includes official implementations of the following works:
-- A strong baseline for fast sampling of diffusion models with ODE solvers
-- (CVPR 2024) [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094)<br>
-Zhenyu Zhou, Defang Chen, Can Wang, Chun Chen
+diff-sampler is an open source toolbox for fast sampling of diffusion models, with various model implementations, numerical-based solvers, time schedules and other features. 
+This repository also includes official implementations of the following works:
 
-<!-- ## TODO -->
-<!-- - [x] Release the code of [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094) for fast sampling of diffusion models -->
-<!-- - [ ] Release the code of [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947) for evaluating the geometric structure of diffusion models -->
+- [ ] **A Geometric Perspective on Diffusion Models**, https://arxiv.org/abs/2305.19947
+- [x] **Fast ODE-based Sampling for Diffusion Models in Around 5 Steps**, [CVPR 2024], https://arxiv.org/abs/2312.00094
+- [ ] **On the Trajectory Regularity of ODE-based Diffusion Sampling**, [ICML 2024], https://arxiv.org/abs/2405.11326
 
 ## Requirements
-- This codebase mainly refers to the codebase of [EDM](https://github.com/NVlabs/edm). To install the required packages, please refer to the [EDM](https://github.com/NVlabs/edm) codebase.
-- This codebase supports the pre-trained diffusion models from [EDM](https://github.com/NVlabs/edm), [ADM](https://github.com/openai/guided-diffusion), [Consistency models](https://github.com/openai/consistency_models), [LDM](https://github.com/CompVis/latent-diffusion) and [Stable Diffusion](https://github.com/CompVis/stable-diffusion). When you want to load the pre-trained diffusion models from these codebases, please refer to the corresponding codebases for package installation.
+- This repository is mainly built upon [EDM](https://github.com/NVlabs/edm). To install the required packages, please refer to the [EDM](https://github.com/NVlabs/edm) codebase.
+- This codebase supports the pre-trained diffusion models from [EDM](https://github.com/NVlabs/edm), [ADM](https://github.com/openai/guided-diffusion), [Consistency models](https://github.com/openai/consistency_models), [LDM](https://github.com/CompVis/latent-diffusion) and [Stable Diffusion](https://github.com/CompVis/stable-diffusion). Please refer to the corresponding codebases for package installation, if you want to load their pre-trained diffusion models.
 
 ## Supported ODE Solvers for Diffusion Models
 | Name | Max Order | Source | Location |
@@ -19,7 +17,7 @@ Zhenyu Zhou, Defang Chen, Can Wang, Chun Chen
 |Heun|2|[Elucidating the Design Space of Diffusion-Based Generative Models](https://arxiv.org/abs/2206.00364)|diff-solvers-main|
 |DPM-Solver-2|2|[DPM-Solver: A Fast ODE Solver for Diffusion Probabilistic Model Sampling in Around 10 Steps](https://arxiv.org/abs/2206.00927)|diff-solvers-main|
 |AMED-Solver|2|[Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094)|amed-solver-main|
-|DPM-Solver++|3|[DPM-Solver: A Fast ODE Solver for Diffusion Probabilistic Model Sampling in Around 10 Steps](https://arxiv.org/abs/2206.00927)|diff-solvers-main|
+|DPM-Solver++|3|[DPM-Solver++: Fast Solver for Guided Sampling of Diffusion Probabilistic Models](https://arxiv.org/abs/2211.01095)|diff-solvers-main|
 |UniPC|3|[UniPC: A Unified Predictor-Corrector Framework for Fast Sampling of Diffusion Models](https://proceedings.neurips.cc/paper_files/paper/2023/hash/9c2aa1e456ea543997f6927295196381-Abstract-Conference.html)|diff-solvers-main|
 |DEIS|4|[Fast Sampling of Diffusion Models with Exponential Integrator](https://arxiv.org/abs/2204.13902)|diff-solvers-main|
 |iPNDM|4|[Fast Sampling of Diffusion Models with Exponential Integrator](https://arxiv.org/abs/2204.13902)|diff-solvers-main|
@@ -52,5 +50,12 @@ If you find this repository useful, please consider citing the following paper:
   author={Zhou, Zhenyu and Chen, Defang and Wang, Can and Chen, Chun},
   journal={arXiv preprint arXiv:2312.00094},
   year={2023}
+}
+
+@article{chen2024trajectory,
+  title={On the Trajectory Regularity of ODE-based Diffusion Sampling},
+  author={Chen, Defang and Zhou, Zhenyu and Wang, Can and Shen, Chunhua and Lyu, Siwei},
+  journal={arXiv preprint arXiv:2405.11326},
+  year={2024}
 }
 ```
