@@ -22,7 +22,6 @@ def euler_sampler(
     class_labels=None, 
     condition=None, 
     unconditional_condition=None,
-    randn_like=torch.randn_like, 
     num_steps=None, 
     sigma_min=0.002, 
     sigma_max=80, 
@@ -42,7 +41,6 @@ def euler_sampler(
         class_labels: A pytorch tensor. The condition for conditional sampling or guided sampling.
         condition: A pytorch tensor. The condition to the model used in LDM and Stable Diffusion
         unconditional_condition: A pytorch tensor. The unconditional condition to the model used in LDM and Stable Diffusion
-        randn_like: A random tensor generator.
         num_steps: A `int`. The total number of the time steps with `num_steps-1` spacings. 
         sigma_min: A `float`. The ending sigma during samping.
         sigma_max: A `float`. The starting sigma during sampling.
@@ -97,7 +95,6 @@ def heun_sampler(
     class_labels=None, 
     condition=None, 
     unconditional_condition=None,
-    randn_like=torch.randn_like, 
     num_steps=None, 
     sigma_min=0.002, 
     sigma_max=80, 
@@ -117,7 +114,6 @@ def heun_sampler(
         class_labels: A pytorch tensor. The condition for conditional sampling or guided sampling.
         condition: A pytorch tensor. The condition to the model used in LDM and Stable Diffusion
         unconditional_condition: A pytorch tensor. The unconditional condition to the model used in LDM and Stable Diffusion
-        randn_like: A random tensor generator.
         num_steps: A `int`. The total number of the time steps with `num_steps-1` spacings. 
         sigma_min: A `float`. The ending sigma during samping.
         sigma_max: A `float`. The starting sigma during sampling.
@@ -177,7 +173,6 @@ def dpm_2_sampler(
     class_labels=None, 
     condition=None, 
     unconditional_condition=None,
-    randn_like=torch.randn_like, 
     num_steps=None, 
     sigma_min=0.002, 
     sigma_max=80, 
@@ -198,7 +193,6 @@ def dpm_2_sampler(
         class_labels: A pytorch tensor. The condition for conditional sampling or guided sampling.
         condition: A pytorch tensor. The condition to the model used in LDM and Stable Diffusion
         unconditional_condition: A pytorch tensor. The unconditional condition to the model used in LDM and Stable Diffusion
-        randn_like: A random tensor generator.
         num_steps: A `int`. The total number of the time steps with `num_steps-1` spacings. 
         sigma_min: A `float`. The ending sigma during samping.
         sigma_max: A `float`. The starting sigma during sampling.
@@ -260,7 +254,6 @@ def ipndm_sampler(
     class_labels=None, 
     condition=None, 
     unconditional_condition=None,
-    randn_like=torch.randn_like, 
     num_steps=None, 
     sigma_min=0.002, 
     sigma_max=80, 
@@ -281,7 +274,6 @@ def ipndm_sampler(
         class_labels: A pytorch tensor. The condition for conditional sampling or guided sampling.
         condition: A pytorch tensor. The condition to the model used in LDM and Stable Diffusion
         unconditional_condition: A pytorch tensor. The unconditional condition to the model used in LDM and Stable Diffusion
-        randn_like: A random tensor generator.
         num_steps: A `int`. The total number of the time steps with `num_steps-1` spacings. 
         sigma_min: A `float`. The ending sigma during samping.
         sigma_max: A `float`. The starting sigma during sampling.
@@ -354,13 +346,13 @@ def ipndm_v_sampler(
     class_labels=None, 
     condition=None, 
     unconditional_condition=None,
-    randn_like=torch.randn_like, 
     num_steps=None, 
     sigma_min=0.002, 
     sigma_max=80, 
     schedule_type='polynomial', 
     schedule_rho=7, 
     afs=False, 
+    denoise_to_zero=False, 
     return_inters=False, 
     max_order=4, 
     **kwargs
@@ -374,7 +366,6 @@ def ipndm_v_sampler(
         class_labels: A pytorch tensor. The condition for conditional sampling or guided sampling.
         condition: A pytorch tensor. The condition to the model used in LDM and Stable Diffusion
         unconditional_condition: A pytorch tensor. The unconditional condition to the model used in LDM and Stable Diffusion
-        randn_like: A random tensor generator.
         num_steps: A `int`. The total number of the time steps with `num_steps-1` spacings. 
         sigma_min: A `float`. The ending sigma during samping.
         sigma_max: A `float`. The starting sigma during sampling.
@@ -471,13 +462,13 @@ def deis_sampler(
     class_labels=None, 
     condition=None, 
     unconditional_condition=None,
-    randn_like=torch.randn_like,  
     num_steps=None, 
     sigma_min=0.002, 
     sigma_max=80, 
     schedule_type='polynomial', 
     schedule_rho=7, 
     afs=False, 
+    denoise_to_zero=False, 
     return_inters=False, 
     max_order=4, 
     coeff_list=None, 
@@ -492,7 +483,6 @@ def deis_sampler(
         class_labels: A pytorch tensor. The condition for conditional sampling or guided sampling.
         condition: A pytorch tensor. The condition to the model used in LDM and Stable Diffusion
         unconditional_condition: A pytorch tensor. The unconditional condition to the model used in LDM and Stable Diffusion
-        randn_like: A random tensor generator.
         num_steps: A `int`. The total number of the time steps with `num_steps-1` spacings. 
         sigma_min: A `float`. The ending sigma during samping.
         sigma_max: A `float`. The starting sigma during sampling.
@@ -572,7 +562,6 @@ def dpm_pp_sampler(
     class_labels=None, 
     condition=None, 
     unconditional_condition=None,
-    randn_like=torch.randn_like, 
     num_steps=None, 
     sigma_min=0.002, 
     sigma_max=80, 
@@ -595,7 +584,6 @@ def dpm_pp_sampler(
         class_labels: A pytorch tensor. The condition for conditional sampling or guided sampling.
         condition: A pytorch tensor. The condition to the model used in LDM and Stable Diffusion
         unconditional_condition: A pytorch tensor. The unconditional condition to the model used in LDM and Stable Diffusion
-        randn_like: A random tensor generator.
         num_steps: A `int`. The total number of the time steps with `num_steps-1` spacings. 
         sigma_min: A `float`. The ending sigma during samping.
         sigma_max: A `float`. The starting sigma during sampling.
@@ -670,7 +658,6 @@ def unipc_sampler(
     class_labels=None, 
     condition=None, 
     unconditional_condition=None,
-    randn_like=torch.randn_like, 
     num_steps=None, 
     sigma_min=0.002, 
     sigma_max=80, 
@@ -694,7 +681,6 @@ def unipc_sampler(
         class_labels: A pytorch tensor. The condition for conditional sampling or guided sampling.
         condition: A pytorch tensor. The condition to the model used in LDM and Stable Diffusion
         unconditional_condition: A pytorch tensor. The unconditional condition to the model used in LDM and Stable Diffusion
-        randn_like: A random tensor generator.
         num_steps: A `int`. The total number of the time steps with `num_steps-1` spacings. 
         sigma_min: A `float`. The ending sigma during samping.
         sigma_max: A `float`. The starting sigma during sampling.
@@ -741,7 +727,7 @@ def unipc_sampler(
             use_corrector = True
             x_next, model_out = unipc_update(x_cur, buffer_model, buffer_t, t_next, order, \
                                               net=net, class_labels=class_labels, use_corrector=use_corrector, \
-                                              predict_x0=predict_x0, variant=variant, **kwargs)
+                                              predict_x0=predict_x0, variant=variant)
             buffer_model.append(model_out)
             buffer_t.append(t_next)
         else:
@@ -749,7 +735,7 @@ def unipc_sampler(
             use_corrector = False if i == num_steps - 2 else True
             x_next, model_out = unipc_update(x_cur, buffer_model, buffer_t, t_next, order, \
                                               net=net, class_labels=class_labels, use_corrector=use_corrector, \
-                                              predict_x0=predict_x0, variant=variant, **kwargs)
+                                              predict_x0=predict_x0, variant=variant)
             for k in range(max_order - 1):
                 buffer_model[k] = buffer_model[k + 1]
                 buffer_t[k] = buffer_t[k + 1]

@@ -1,69 +1,44 @@
 # diff-solvers
-diff-solvers is an open source toolbox for fast sampling from diffusion models. We set a strong baseline for fast sampling of diffusion models with ODE-solvers
+diff-sampler is an open source toolbox for fast sampling of diffusion models, with various model implementations, numerical-based solvers, time schedules and other features. 
 
 ## Requirements
 - This codebase mainly refers to the codebase of [EDM](https://github.com/NVlabs/edm). To install the required packages, please refer to the [EDM](https://github.com/NVlabs/edm) codebase.
-- This codebase supports the pre-trained diffusion models from [EDM](https://github.com/NVlabs/edm), [ADM](https://github.com/openai/guided-diffusion), [Consistency models](https://github.com/openai/consistency_models), [LDM](https://github.com/CompVis/latent-diffusion) and [Stable Diffusion](https://github.com/CompVis/stable-diffusion). When you want to load the pre-trained diffusion models from these codebases, please refer to the corresponding codebases for package installation.
+- This codebase supports the pre-trained diffusion models from [EDM](https://github.com/NVlabs/edm), [ADM](https://github.com/openai/guided-diffusion), [Consistency models](https://github.com/openai/consistency_models), [LDM](https://github.com/CompVis/latent-diffusion) and [Stable Diffusion](https://github.com/CompVis/stable-diffusion). Please refer to the corresponding codebases for package installation when loading the pre-trained diffusion models from these codebases.
 
 ## Getting Started
-Run the command below to sample with specified ODE solvers and pre-trained diffusion models. This command can be parallelized across multiple GPUs by adjusting ```--nproc_per_node```. You can find the descriptions to all the parameters in the next section. The generated images will be stored at "./samples/dataset_name/" by default.
+Run the commands in [launch.sh](./launch.sh) to sample with specified ODE solvers and pre-trained diffusion models. 
+All the commands can be parallelized across multiple GPUs by adjusting ```--nproc_per_node```. 
+You can find the descriptions to all the parameters in the next section. The required models will be downloaded at ```"./src/dataset_name"``` by default. Some basic commands are listed below:
 ```.bash
-# Generate 50000 images for FID evaluation
-SOLVER_FLAGS="--solver=ipndm --num_steps=6 --afs=False --denoise_to_zero=False"
+# Generate a grid of images with DDIM (Euler's method) on CIFAR10
+# num_steps is the number of timestamps, hence num_steps=7 equals 6 steps
+SOLVER_FLAGS="--solver=euler --num_steps=7 --afs=False"
 SCHEDULE_FLAGS="--schedule_type=polynomial --schedule_rho=7"
-ADDITIONAL_FLAGS="--max_order=4"
-GUIDANCE_FLAGS=""
-torchrun --standalone --nproc_per_node=1 sample.py \
---dataset_name="name of the dataset" \
---model_path="/path/to/the/listed/models/above/" \
---batch=64 \
---seeds="0-49999" \
-$SOLVER_FLAGS \
-$SCHEDULE_FLAGS \
-$ADDITIONAL_FLAGS \
-$GUIDANCE_FLAGS
+python sample.py --dataset_name="cifar10" --batch=64 --seeds="0-63" --grid=True $SOLVER_FLAGS $SCHEDULE_FLAGS
 ```
 
 ```.bash
-# Generate 16 images in grid form
-SOLVER_FLAGS="--solver=ipndm --num_steps=6 --afs=False --denoise_to_zero=False"
+# Generate 50k images with iPNDM solver on CIFAR10 for FID evaluation
+SOLVER_FLAGS="--solver=ipndm --num_steps=6 --afs=False"
 SCHEDULE_FLAGS="--schedule_type=polynomial --schedule_rho=7"
 ADDITIONAL_FLAGS="--max_order=4"
-GUIDANCE_FLAGS=""
 torchrun --standalone --nproc_per_node=1 sample.py \
---dataset_name="name of the dataset" \
---model_path="/path/to/your/model" \
---batch=16 \
---seeds="0-15" \
---grid=True \
-$SOLVER_FLAGS \
-$SCHEDULE_FLAGS \
-$ADDITIONAL_FLAGS \
-$GUIDANCE_FLAGS
+--dataset_name="cifar10" --batch=128 --seeds="0-49999" $SOLVER_FLAGS $SCHEDULE_FLAGS $ADDITIONAL_FLAGS 
 ```
 
 ```.bash
-# Example: Generate samples on Stable-Diffusion with DPM-Solver++(2M)
-SOLVER_FLAGS="--solver=dpmpp --num_steps=6 --afs=False --denoise_to_zero=False"
+# Use your own prompt for text-to-image generation with Stable Diffusion v1.5
+# For Stable Diffusion, 1 step = 2 NFE due to the classifier-free guidance
+SOLVER_FLAGS="--solver=dpmpp --num_steps=6 --afs=False"
 SCHEDULE_FLAGS="--schedule_type=discrete --schedule_rho=1"
 ADDITIONAL_FLAGS="--max_order=2 --predict_x0=False --lower_order_final=True"
 GUIDANCE_FLAGS="--guidance_type=cfg --guidance_rate=7.5"
-torchrun --standalone --nproc_per_node=1 sample.py \
---dataset_name="ms_coco" \
---model_path="/path/to/stable-diffusion-v1/model.ckpt" \
---batch=4 \
---seeds="0-3" \
---grid=True \
+torchrun --standalone --nproc_per_node=1 sample.py --dataset_name="ms_coco" --batch=4 --seeds="0-3" --grid=True \
 --prompt="a photograph of an astronaut riding a horse" \
-$SOLVER_FLAGS \
-$SCHEDULE_FLAGS \
-$ADDITIONAL_FLAGS \
-$GUIDANCE_FLAGS
-# --prompt_path="/path/to/MS-COCO_val2014_30k_captions.csv" \  
-# add --prompt_path, set --seeds="0-29999", delete --prompt and --grid to generating 30k samples for FID evaluation
+$SOLVER_FLAGS $SCHEDULE_FLAGS $ADDITIONAL_FLAGS $GUIDANCE_FLAGS
 ```
 
-To compute Fréchet inception distance (FID) for a given model and sampler, first generate 50000 random images and then compare them against the dataset reference statistics using ```fid.py```:
+The generated images will be stored at ```"./samples"``` by default. To compute Fréchet inception distance (FID) for a given model and sampler, first generate 50k images and then compare them against the dataset reference statistics using ```fid.py```:
 ```.bash
 # FID evaluation
 python fid.py calc --images=path/to/images --ref=path/to/fid/stat
@@ -77,8 +52,7 @@ python fid.py ref --data=path/to/my-dataset.zip --dest=path/to/save/my-dataset.n
 ## Description of Parameters
 | Name | Paramater | Default | Description |
 |------|-----------|---------|-------------|
-|General options|dataset_name|None|One in ['cifar10', 'ffhq', 'imagenet64', 'lsun_bedroom', 'imagenet256', 'lsun_bedroom_ldm', 'ms_coco']|
-|               |model_path|None|Path to the pre-trained diffusion models|
+|General options|dataset_name|None|One in ['cifar10', 'ffhq', 'afhqv2', 'imagenet64', 'lsun_bedroom', 'imagenet256', 'lsun_bedroom_ldm', 'ffhq_ldm', 'ms_coco']|
 |               |batch|64|Total batch size|
 |               |seeds|0-63|Specify a different random seed for each image|
 |               |grid|False|Organize the generated images as grid|
@@ -93,13 +67,11 @@ python fid.py ref --data=path/to/my-dataset.zip --dest=path/to/save/my-dataset.n
 |ADDITIONAL_FLAGS|max_order|None|Option for multi-step solvers. 1<=max_order<=4 for iPNDM, iPNDM_v and DEIS, 1<=max_order<=3 for DPM-Solver++ and UniPC|
 |                |predict_x0|True|Option for DPM-Solver++ and UniPC. Whether to use the data prediction formulation.|
 |                |lower_order_final|True|Option for DPM-Solver++ and UniPC. Whether to lower the order at the final stages of sampling.|
-|                |variant|'hb2'|Option for UniPC. One in ['bh1', 'bh2']|
+|                |variant|'bh2'|Option for UniPC. One in ['bh1', 'bh2']|
 |                |deis_mode|'tab'|Option for UniPC. One in ['tab', 'rhoab']|
 |GUIDANCE_FLAGS|guidance_type|None|One in ['cg', 'cfg', 'uncond', None]. 'cg' for classifier-guidance, 'cfg' for classifier-free-guidance used in Stable Diffusion, and 'uncond' for unconditional used in LDM|
 |              |guidance_rate|None|Guidance rate|
-|              |classifier_path|None|Path to the pre-trained classifier used for classifier-guidance|
 |              |prompt|None|Prompt for Stable Diffusion sampling|
-|              |prompt_path|None|Path to MS-COCO_val2014_30k_captions.csv for FID evaluation on Stable Diffusion|
 
 ## Supported ODE Solvers
 | Name | Max Order | Source |
@@ -117,17 +89,17 @@ python fid.py ref --data=path/to/my-dataset.zip --dest=path/to/save/my-dataset.n
 We perform sampling on a variaty of pre-trained diffusion models from different codebases including
 [EDM](https://github.com/NVlabs/edm), [ADM](https://github.com/openai/guided-diffusion), [Consistency models](https://github.com/openai/consistency_models), [LDM](https://github.com/CompVis/latent-diffusion) and [Stable Diffusion](https://github.com/CompVis/stable-diffusion). The tested pre-trained models are listed below:
 
-| Codebase | Dataset | Resolusion | Pre-trained Models | Description |
+| Codebase | dataset_name | Resolusion | Pre-trained Models | Description |
 |----------|---------|------------|--------------------|-------------|
-|EDM|CIFAR10|32|[edm-cifar10-32x32-uncond-vp.pkl](https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-cifar10-32x32-uncond-vp.pkl)
-|EDM|FFHQ|64|[edm-ffhq-64x64-uncond-vp.pkl](https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-ffhq-64x64-uncond-vp.pkl)
-|EDM|ImageNet|64|[edm-imagenet-64x64-cond-adm.pkl](https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-imagenet-64x64-cond-adm.pkl)
-|Consistency Models|LSUN_bedroom|256|[edm_bedroom256_ema.pt](https://openaipublic.blob.core.windows.net/consistency/edm_bedroom256_ema.pt)|Pixel-space
-|ADM|ImageNet|256|[256x256_diffusion.pt](https://openaipublic.blob.core.windows.net/diffusion/jul-2021/256x256_diffusion.pt) and [256x256_classifier.pt](https://openaipublic.blob.core.windows.net/diffusion/jul-2021/256x256_classifier.pt)|Classifier-guidance.
-|LDM|LSUN_bedroom|256|[lsun_bedroom.pt](https://openaipublic.blob.core.windows.net/diffusion/jul-2021/lsun_bedroom.pt) and [vq-f4 model](https://ommer-lab.com/files/latent-diffusion/vq-f4.zip)|Latent-space
-|Stable Diffusion|MS-COCO|512|[stable-diffusion-v1-4](https://huggingface.co/CompVis/stable-diffusion-v1-4)|Classifier-free-guidance
-
-Place the downloaded vq-f4 model at `./models/ldm_models/first_stage_models/vq-f4/model.ckpt`
+|EDM|cifar10|32|[edm-cifar10-32x32-uncond-vp.pkl](https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-cifar10-32x32-uncond-vp.pkl)
+|EDM|ffhq|64|[edm-ffhq-64x64-uncond-vp.pkl](https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-ffhq-64x64-uncond-vp.pkl)
+|EDM|afhqv2|64|[edm-afhqv2-64x64-uncond-vp.pkl](https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-afhqv2-64x64-uncond-vp.pkl)
+|EDM|imagenet64|64|[edm-imagenet-64x64-cond-adm.pkl](https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-imagenet-64x64-cond-adm.pkl)
+|Consistency Models|lsun_bedroom|256|[edm_bedroom256_ema.pt](https://openaipublic.blob.core.windows.net/consistency/edm_bedroom256_ema.pt)|Pixel-space
+|ADM|imagenet256|256|[256x256_diffusion.pt](https://openaipublic.blob.core.windows.net/diffusion/jul-2021/256x256_diffusion.pt) and [256x256_classifier.pt](https://openaipublic.blob.core.windows.net/diffusion/jul-2021/256x256_classifier.pt)|Classifier-guidance.
+|LDM|lsun_bedroom_ldm|256|[lsun_bedrooms.zip](https://ommer-lab.com/files/latent-diffusion/lsun_bedrooms.zip)|Latent-space
+|LDM|ffhq_ldm|256|[ffhq.zip](https://ommer-lab.com/files/latent-diffusion/ffhq.zip)|Latent-space
+|Stable Diffusion|ms_coco|512|[stable-diffusion-v1-5](https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.ckpt)|Classifier-free-guidance
 
 ## FID Statistics
 For facilitating the FID evaluation of diffusion models, we provide our [FID statistics](https://drive.google.com/drive/folders/1f8qf5qtUewCdDrkExK_Tk5-qC-fNPKpL?usp=sharing) of various datasets. They are collected on the Internet or made by ourselves with the guidance of the [EDM](https://github.com/NVlabs/edm) codebase. 

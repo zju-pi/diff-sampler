@@ -506,19 +506,19 @@ class CMPrecond(torch.nn.Module):
         model,
         label_dim       = 0,                # Number of class labels, 0 = unconditional.
         use_fp16        = False,            # Execute the underlying model at FP16 precision?
-        sigma_min       = 0,                # Minimum supported noise level.
-        sigma_max       = float('inf'),     # Maximum supported noise level.
+        sigma_min       = 0.002,            # Minimum supported noise level.
+        sigma_max       = 80.0,             # Maximum supported noise level.
         sigma_data      = 0.5,              # Expected standard deviation of the training data.
-        model_type      = 'CMUNet',         # Class name of the underlying model.
     ):
         super().__init__()
         self.img_resolution = model.image_size
         self.img_channels = model.in_channels
         self.label_dim = label_dim
-        self.sigma_min = 0.002
-        self.sigma_max = 80.0
+        self.sigma_min = sigma_min
+        self.sigma_max = sigma_max
         self.sigma_data = sigma_data
         self.model = model
+        self.use_fp16 = use_fp16
     
     def append_dims(self, x, target_dims):
         """Appends dimensions to the end of a tensor until it has target_dims dimensions."""
@@ -530,6 +530,10 @@ class CMPrecond(torch.nn.Module):
         return x[(...,) + (None,) * dims_to_append]
 
     def forward(self, x, sigma, class_labels=None, force_fp32=False, **model_kwargs):
+        dtype = torch.float16 if (self.use_fp16 and not force_fp32 and x.device.type == 'cuda') else torch.float32
+        x = x.to(dtype)
+        sigma = sigma.to(dtype)
+
         c_skip = self.append_dims(self.sigma_data ** 2 / (sigma ** 2 + self.sigma_data ** 2), x.ndim)
         c_out = self.append_dims(sigma * self.sigma_data / (sigma ** 2 + self.sigma_data ** 2).sqrt(), x.ndim)
         c_in = self.append_dims(1 / (self.sigma_data ** 2 + sigma ** 2).sqrt(), x.ndim)
@@ -561,7 +565,6 @@ class CGPrecond(torch.nn.Module):
         beta_min        = 0.1,              # Initial slope of the noise level schedule.
         M               = 1000,             # Original number of timesteps in the DDPM formulation.
         epsilon_t       = 1e-3,             # Minimum t-value used during training.
-        model_type      = 'CGUNet',         # Class name of the underlying model.
     ):
         super().__init__()
         self.img_resolution = model.image_size
@@ -578,7 +581,9 @@ class CGPrecond(torch.nn.Module):
         self.guidance_rate = guidance_rate
 
     def forward(self, x, sigma, class_labels=None, force_fp32=False, y=None, **model_kwargs):
-        sigma = sigma.reshape(-1, 1, 1, 1)
+        dtype = torch.float16 if (self.use_fp16 and not force_fp32 and x.device.type == 'cuda') else torch.float32
+        x = x.to(dtype)
+        sigma = sigma.to(dtype).reshape(-1, 1, 1, 1)
 
         c_skip = 1
         c_out = -sigma
@@ -632,7 +637,7 @@ class CFGPrecond(torch.nn.Module):
         img_resolution  = 64,
         img_channels    = 4,
         label_dim       = True,                 # Number of class labels, 0 = unconditional.
-        model_type      = 'CFGUNet',            # Class name of the underlying model.
+        use_fp16        = False,            # Execute the underlying model at FP16 precision?
     ):
         super().__init__()
         self.img_resolution = img_resolution
@@ -644,11 +649,7 @@ class CFGPrecond(torch.nn.Module):
         self.model = model
         self.guidance_rate = guidance_rate
         self.guidance_type = guidance_type
-        if self.guidance_type == 'classifier-free':
-            self.wrapper_fn = lambda x, t, c: self.model.apply_model(x, t, c)
-        else:
-            self.wrapper_fn = lambda x, t: self.model.apply_model(x, t, None)
-        
+
         alphas_cumprod = model.alphas_cumprod
         log_alphas = 0.5 * torch.log(alphas_cumprod)
         self.M = len(log_alphas)
@@ -657,19 +658,18 @@ class CFGPrecond(torch.nn.Module):
 
         self.sigma_min = float(self.sigma(epsilon_t))
         self.sigma_max = float(self.sigma(1))
-        
+        self.use_fp16 = use_fp16
+       
     def noise_pred_fn(self, x, c_noise, cond=None):
         if c_noise.reshape((-1,)).shape[0] == 1:
             c_noise = c_noise.expand((x.shape[0]))
         t_input = c_noise
-        if cond is None:
-            output = self.wrapper_fn(x, t_input)
-        else:
-            output = self.wrapper_fn(x, t_input, cond)
-        return output
+        return self.wrapper_fn(x, t_input, cond)
         
-    def forward(self, x, sigma, condition=None, unconditional_condition=None, **model_kwargs):
-        sigma = sigma.reshape(-1,)
+    def forward(self, x, sigma, condition=None, unconditional_condition=None, force_fp32=False, **model_kwargs):
+        dtype = torch.float16 if (self.use_fp16 and not force_fp32 and x.device.type == 'cuda') else torch.float32
+        x = x.to(dtype)
+        sigma = sigma.to(dtype).reshape(-1,)
 
         c_skip = 1
         c_out = -sigma
@@ -756,3 +756,6 @@ class CFGPrecond(torch.nn.Module):
         end_y = torch.gather(y_positions_expanded, dim=2, index=(start_idx2 + 1).unsqueeze(2)).squeeze(2)
         cand = start_y + (x - start_x) * (end_y - start_y) / (end_x - start_x)
         return cand
+
+    def wrapper_fn(self, x, t, cond=None):
+        return self.model.apply_model(x, t, cond)

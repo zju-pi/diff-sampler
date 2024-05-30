@@ -10,8 +10,10 @@ import PIL.Image
 import dnnlib
 import solvers
 import solver_utils
+from torch import autocast
 from torch_utils import distributed as dist
 from torchvision.utils import make_grid, save_image
+from torch_utils.download_util import check_file_by_key
 
 #----------------------------------------------------------------------------
 # Wrapper for torch.Generator that allows specifying a different random seed
@@ -71,14 +73,62 @@ def load_ldm_model(config, ckpt, verbose=False):
 
 #----------------------------------------------------------------------------
 
+def create_model(dataset_name=None, guidance_type=None, guidance_rate=None, device=None):
+    model_path, classifier_path = check_file_by_key(dataset_name)
+    dist.print0(f'Loading the pre-trained diffusion model from "{model_path}"...')
+
+    if dataset_name in ['cifar10', 'ffhq', 'afhqv2', 'imagenet64']:         # models from EDM
+        with dnnlib.util.open_url(model_path, verbose=(dist.get_rank() == 0)) as f:
+            net = pickle.load(f)['ema'].to(device)
+        net.sigma_min = 0.002
+        net.sigma_max = 80.0
+        model_source = 'edm'
+    elif dataset_name in ['lsun_bedroom', 'lsun_cat']:                      # models from Consistency Models
+        from models.cm.cm_model_loader import load_cm_model
+        from models.networks_edm import CMPrecond
+        net = load_cm_model(model_path)
+        net = CMPrecond(net).to(device)
+        model_source = 'cm'
+    else:
+        if guidance_type == 'cg':            # clssifier guidance           # models from ADM
+            assert classifier_path is not None
+            from models.guided_diffusion.cg_model_loader import load_cg_model
+            from models.networks_edm import CGPrecond
+            net, classifier = load_cg_model(model_path, classifier_path)
+            net = CGPrecond(net, classifier, guidance_rate=guidance_rate).to(device)
+            model_source = 'adm'
+        elif guidance_type in ['uncond', 'cfg']:                            # models from LDM
+            from omegaconf import OmegaConf
+            from models.networks_edm import CFGPrecond
+            if dataset_name in ['lsun_bedroom_ldm']:
+                config = OmegaConf.load('./models/ldm/configs/latent-diffusion/lsun_bedrooms-ldm-vq-4.yaml')
+                net = load_ldm_model(config, model_path)
+                net = CFGPrecond(net, img_resolution=64, img_channels=3, guidance_rate=1., guidance_type='uncond', label_dim=0).to(device)
+            elif dataset_name in ['ffhq_ldm']:
+                config = OmegaConf.load('./models/ldm/configs/latent-diffusion/ffhq-ldm-vq-4.yaml')
+                net = load_ldm_model(config, model_path)
+                net = CFGPrecond(net, img_resolution=64, img_channels=3, guidance_rate=1., guidance_type='uncond', label_dim=0).to(device)
+            elif dataset_name in ['ms_coco']:
+                assert guidance_type == 'cfg'
+                config = OmegaConf.load('./models/ldm/configs/stable-diffusion/v1-inference.yaml')
+                net = load_ldm_model(config, model_path)
+                net = CFGPrecond(net, img_resolution=64, img_channels=4, guidance_rate=guidance_rate, guidance_type='classifier-free', label_dim=True).to(device)
+            model_source = 'ldm'
+    if net is None:
+        raise ValueError("Got wrong settings: check dataset_name and guidance_type!")
+    net.eval()
+
+    return net, model_source
+
+#----------------------------------------------------------------------------
+
 @click.command()
 # General options
 @click.option('--dataset_name',            help='Name of the dataset', metavar='STR',                               type=str, required=True)
-@click.option('--model_path',              help='Network filepath', metavar='PATH|URL',                             type=str, required=True)
+@click.option('--model_path',              help='Network filepath', metavar='PATH|URL',                             type=str)
 @click.option('--batch', 'max_batch_size', help='Maximum batch size', metavar='INT',                                type=click.IntRange(min=1), default=64, show_default=True)
 @click.option('--seeds',                   help='Random seeds (e.g. 1,2,5-10)', metavar='LIST',                     type=parse_int_list, default='0-63', show_default=True)
 @click.option('--prompt',                  help='Prompt for Stable Diffusion sampling', metavar='STR',              type=str)
-@click.option('--prompt_path',             help='Path to MS-COCO_val2014_30k_captions.csv', metavar='DIR',          type=str)
 
 # Options for sampling
 @click.option('--solver',                  help='Name of the solver', metavar='many solvers',                       type=click.Choice(['euler', 'ipndm', 'ipndm_v', 'heun', 'dpm', 'dpmpp', 'deis', 'unipc']))
@@ -86,9 +136,9 @@ def load_ldm_model(config, ckpt, verbose=False):
 @click.option('--afs',                     help='Whether to use AFS', metavar='BOOL',                               type=bool, default=False, show_default=True)
 @click.option('--guidance_type',           help='Guidance type',                                                    type=click.Choice(['cg', 'cfg', 'uncond', None]), default=None, show_default=True)
 @click.option('--guidance_rate',           help='Guidance rate',                                                    type=float)
-@click.option('--classifier_path',         help='Path to pre-trained classifier model', metavar='DIR',              type=str)
 @click.option('--denoise_to_zero',         help='Whether to denoise from the last time step to 0',                  type=bool, default=False)
 @click.option('--return_inters',           help='Whether to save intermediate outputs', metavar='BOOL',             type=bool, default=False)
+@click.option('--use_fp16',                help='Whether to use mixed precision', metavar='BOOL',                   type=bool, default=False)
 # Additional options for multi-step solvers, 1<=max_order<=4 for iPNDM, iPNDM_v and DEIS, 1<=max_order<=3 for DPM-Solver++ and UniPC
 @click.option('--max_order',               help='Max order for solvers', metavar='INT',                             type=click.IntRange(min=1))
 # Additional options for DPM-Solver++ and UniPC
@@ -110,7 +160,7 @@ def load_ldm_model(config, ckpt, verbose=False):
 @click.option('--grid',                    help='Whether to make grid',                                             type=bool, default=False)
 @click.option('--subdirs',                 help='Create subdirectory for every 1000 seeds',                         type=bool, default=True, is_flag=True)
 
-def main(dataset_name, model_path, max_batch_size, seeds, grid, outdir, subdirs, prompt_path, device=torch.device('cuda'), **solver_kwargs):
+def main(dataset_name, max_batch_size, seeds, grid, outdir, subdirs, device=torch.device('cpu'), **solver_kwargs):
 
     dist.init()
     num_batches = ((len(seeds) - 1) // (max_batch_size * dist.get_world_size()) + 1) * dist.get_world_size()
@@ -118,64 +168,25 @@ def main(dataset_name, model_path, max_batch_size, seeds, grid, outdir, subdirs,
     rank_batches = all_batches[dist.get_rank() :: dist.get_world_size()]
 
     if dataset_name in ['ms_coco'] and solver_kwargs['prompt'] is None:
-        # Loading MS-COCO captions
+        # Loading MS-COCO captions for FID-30k evaluaion
         # We use the selected 30k captions from https://github.com/boomb0om/text2image-benchmark
-        assert prompt_path is not None, "Path to MS-COCO_val2014_30k_captions.csv required for FID evaluation"
-        dist.print0(f"Loading MS-COCO 30k captions from {prompt_path}...")
+        prompt_path, _ = check_file_by_key('prompts')
         sample_captions = []
         with open(prompt_path, 'r') as file:
             reader = csv.DictReader(file)
             for row in reader:
                 text = row['text']
                 sample_captions.append(text)
-        sample_captions_local = sample_captions[dist.get_rank() * 30000 // dist.get_world_size() : (dist.get_rank() + 1) * 30000 // dist.get_world_size()]
 
     # Rank 0 goes first
     if dist.get_rank() != 0:
         torch.distributed.barrier()
 
     # Load pre-trained diffusion models.
-    net = None
-    dist.print0(f'Loading the pre-trained diffusion model from "{model_path}"...')
-    if dataset_name in ['cifar10', 'ffhq', 'afhqv2', 'imagenet64']:                     # models from EDM
-        solver_kwargs['model_source'] = 'edm'
-        with dnnlib.util.open_url(model_path, verbose=(dist.get_rank() == 0)) as f:
-            net = pickle.load(f)['ema'].to(device)
-        net.sigma_min = 0.002
-        net.sigma_max = 80.0
-    elif dataset_name in ['lsun_bedroom', 'lsun_cat']:                                  # models from CM
-        solver_kwargs['model_source'] = 'cm'
-        from models.cm.cm_model_loader import load_cm_model
-        from models.networks_edm import CMPrecond
-        net = load_cm_model(model_path)
-        net = CMPrecond(net).to(device)
-    else:
-        if solver_kwargs['guidance_type'] == 'cg':            # clssifier guidance      # models from ADM
-            solver_kwargs['model_source'] = 'adm'
-            assert solver_kwargs['classifier_path'] is not None
-            from models.guided_diffusion.cg_model_loader import load_cg_model
-            from models.networks_edm import CGPrecond
-            net, classifier = load_cg_model(model_path, solver_kwargs['classifier_path'])
-            net = CGPrecond(net, classifier, guidance_rate=solver_kwargs['guidance_rate']).to(device)
-        elif solver_kwargs['guidance_type'] in ['uncond', 'cfg']:                       # models from LDM
-            solver_kwargs['model_source'] = 'ldm'
-            from torch import autocast
-            from omegaconf import OmegaConf
-            from models.networks_edm import CFGPrecond
-            precision_scope = autocast
-            if dataset_name in ['lsun_bedroom_ldm']:
-                config = OmegaConf.load('./models/ldm/configs/latent-diffusion/lsun_bedrooms-ldm-vq-4.yaml')
-                net = load_ldm_model(config, model_path)
-                net = CFGPrecond(net, img_resolution=64, img_channels=3, guidance_rate=1., guidance_type='uncond', label_dim=0).to(device)
-            elif dataset_name in ['ms_coco']:
-                assert solver_kwargs['guidance_type'] == 'cfg'
-                config = OmegaConf.load('./models/ldm/configs/stable-diffusion/v1-inference.yaml')
-                net = load_ldm_model(config, model_path)
-                net = CFGPrecond(net, img_resolution=64, img_channels=4, guidance_rate=solver_kwargs['guidance_rate'], guidance_type='classifier-free', label_dim=True).to(device)
-    if net is None:
-        raise ValueError("Got wrong settings: check dataset_name and guidance_type!")
-    net.eval()
-    
+    net, solver_kwargs['model_source'] = create_model(dataset_name, solver_kwargs['guidance_type'], solver_kwargs['guidance_rate'], device)
+    # TODO: currently support fp16 for EDM models, should test it for all models
+    net.use_fp16 = solver_kwargs['use_fp16']
+
     # Other ranks follow.
     if dist.get_rank() == 0:
         torch.distributed.barrier()
@@ -194,7 +205,6 @@ def main(dataset_name, model_path, max_batch_size, seeds, grid, outdir, subdirs,
     solver_kwargs['nfe'] = nfe
     
     # Construct solver, 8 solvers are provided
-    coeff_list = None
     if solver == 'euler':
         sampler_fn = solvers.euler_sampler
     elif solver == 'heun':
@@ -214,12 +224,14 @@ def main(dataset_name, model_path, max_batch_size, seeds, grid, outdir, subdirs,
         # Construct a matrix to store the problematic coefficients for every sampling step
         t_steps = solver_utils.get_schedule(solver_kwargs['num_steps'], solver_kwargs['sigma_min'], solver_kwargs['sigma_max'], \
                                             device=device, schedule_type=solver_kwargs["schedule_type"], schedule_rho=solver_kwargs["schedule_rho"])
-        coeff_list = solver_utils.get_deis_coeff_list(t_steps, solver_kwargs['max_order'], deis_mode=solver_kwargs["deis_mode"])
+        solver_kwargs['coeff_list'] = solver_utils.get_deis_coeff_list(t_steps, solver_kwargs['max_order'], deis_mode=solver_kwargs["deis_mode"])
 
     # Print solver settings.
     dist.print0("Solver settings:")
     for key, value in solver_kwargs.items():
-        if key == 'max_order' and solver in ['euler', 'heun', 'dpm']:
+        if value is None:
+            continue
+        elif key == 'max_order' and solver in ['euler', 'heun', 'dpm']:
             continue
         elif key in ['predict_x0', 'lower_order_final'] and solver not in ['dpmpp', 'unipc']:
             continue
@@ -229,12 +241,16 @@ def main(dataset_name, model_path, max_batch_size, seeds, grid, outdir, subdirs,
             continue
         elif key in ['prompt'] and dataset_name not in ['ms_coco']:
             continue
+        elif key in ['coeff_list']:
+            continue
         dist.print0(f"\t{key}: {value}")
 
     # Loop over batches.
-    count = 0
     if outdir is None:
-        outdir = os.path.join(f"./samples/{dataset_name}", f"{solver}_step{solver_kwargs['num_steps']}_nfe{nfe}")
+        if grid:
+            outdir = os.path.join(f"./samples/grids/{dataset_name}", f"{solver}_nfe{nfe}")
+        else:
+            outdir = os.path.join(f"./samples/{dataset_name}", f"{solver}_nfe{nfe}")
     dist.print0(f'Generating {len(seeds)} images to "{outdir}"...')
     for batch_seeds in tqdm.tqdm(rank_batches, unit='batch', disable=(dist.get_rank() != 0)):
         torch.distributed.barrier()
@@ -245,14 +261,13 @@ def main(dataset_name, model_path, max_batch_size, seeds, grid, outdir, subdirs,
         # Pick latents and labels.
         rnd = StackedRandomGenerator(device, batch_seeds)
         latents = rnd.randn([batch_size, net.img_channels, net.img_resolution, net.img_resolution], device=device)
-        class_labels = None
-        c = uc = None
+        class_labels = c = uc = None
         if net.label_dim:
             if solver_kwargs['model_source'] == 'adm':                                              # ADM models
                 class_labels = rnd.randint(net.label_dim, size=(batch_size,), device=device)
             elif solver_kwargs['model_source'] == 'ldm' and dataset_name == 'ms_coco':
                 if solver_kwargs['prompt'] is None:
-                    prompts = sample_captions_local[count:count+batch_size]
+                    prompts = sample_captions[batch_seeds[0]:batch_seeds[-1]+1]
                 else:
                     prompts = [solver_kwargs['prompt'] for i in range(batch_size)]
                 if solver_kwargs['guidance_rate'] != 1.0:
@@ -266,12 +281,12 @@ def main(dataset_name, model_path, max_batch_size, seeds, grid, outdir, subdirs,
         # Generate images.
         with torch.no_grad():
             if solver_kwargs['model_source'] == 'ldm':
-                with precision_scope("cuda"):
+                with autocast("cuda"):
                     with net.model.ema_scope():
-                        images = sampler_fn(net, latents, condition=c, unconditional_condition=uc, randn_like=rnd.randn_like, **solver_kwargs)
+                        images = sampler_fn(net, latents, condition=c, unconditional_condition=uc, **solver_kwargs)
                         images = net.model.decode_first_stage(images)
             else:
-                images = sampler_fn(net, latents, class_labels=class_labels, condition=None, unconditional_condition=None, randn_like=rnd.randn_like, **solver_kwargs)
+                images = sampler_fn(net, latents, class_labels=class_labels, **solver_kwargs)
 
         # Save images.
         if grid:
@@ -288,8 +303,6 @@ def main(dataset_name, model_path, max_batch_size, seeds, grid, outdir, subdirs,
                 image_path = os.path.join(image_dir, f'{seed:06d}.png')
                 PIL.Image.fromarray(image_np, 'RGB').save(image_path)
     
-        count += batch_size
-        
     # Done.
     torch.distributed.barrier()
     dist.print0('Done.')

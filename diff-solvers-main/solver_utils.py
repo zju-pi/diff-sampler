@@ -348,16 +348,16 @@ def get_deis_coeff_list(t_steps, max_order, N=10000, deis_mode='tab'):
         t_steps, beta_0, beta_1 = edm2t(t_steps)
         C = []
         for i, (t_cur, t_next) in enumerate(zip(t_steps[:-1], t_steps[1:])):
-            order = min(i, max_order)
-            if order == 0:
+            order = min(i+1, max_order)
+            if order == 1:
                 C.append([])
             else:
                 taus = torch.linspace(t_cur, t_next, N)   # split the interval for integral appximation
                 dtau = (t_next - t_cur) / N
-                prev_t = t_steps[[i - k for k in range(order+1)]]
+                prev_t = t_steps[[i - k for k in range(order)]]
                 coeff_temp = []
                 integrand = cal_intergrand(beta_0, beta_1, taus)
-                for j in range(order+1):
+                for j in range(order):
                     poly = cal_poly(prev_t, j, taus)
                     coeff_temp.append(torch.sum(integrand * poly) * dtau)
                 C.append(coeff_temp)
