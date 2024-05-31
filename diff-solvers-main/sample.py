@@ -160,7 +160,7 @@ def create_model(dataset_name=None, guidance_type=None, guidance_rate=None, devi
 @click.option('--grid',                    help='Whether to make grid',                                             type=bool, default=False)
 @click.option('--subdirs',                 help='Create subdirectory for every 1000 seeds',                         type=bool, default=True, is_flag=True)
 
-def main(dataset_name, max_batch_size, seeds, grid, outdir, subdirs, device=torch.device('cpu'), **solver_kwargs):
+def main(dataset_name, max_batch_size, seeds, grid, outdir, subdirs, device=torch.device('cuda'), **solver_kwargs):
 
     dist.init()
     num_batches = ((len(seeds) - 1) // (max_batch_size * dist.get_world_size()) + 1) * dist.get_world_size()
