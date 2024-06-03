@@ -33,7 +33,7 @@ train.py --dataset_name="cifar10" --batch=128 --total_kimg=10 $SOLVER_FLAGS $SCH
 
 ```.bash
 # AMED-Plugin applied on iPNDM
-SOLVER_FLAGS="--sampler_stu=ipndm --sampler_tea=ipndm --num_steps=4 --M=2 --afs=True --scale_dir=0 --scale_time=0.2"
+SOLVER_FLAGS="--sampler_stu=ipndm --sampler_tea=ipndm --num_steps=4 --M=2 --afs=True --scale_dir=0.01 --scale_time=0.2"
 SCHEDULE_FLAGS="--schedule_type=polynomial --schedule_rho=7"
 ADDITIONAL_FLAGS="--max_order=4"
 torchrun --standalone --nproc_per_node=4 --master_port=11111 \
