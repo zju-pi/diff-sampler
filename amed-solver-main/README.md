@@ -15,68 +15,79 @@ Zhenyu Zhou, Defang Chen, Chun Chen, Can Wang
 - This codebase supports the pre-trained diffusion models from [EDM](https://github.com/NVlabs/edm), [ADM](https://github.com/openai/guided-diffusion), [Consistency models](https://github.com/openai/consistency_models), [LDM](https://github.com/CompVis/latent-diffusion) and [Stable Diffusion](https://github.com/CompVis/stable-diffusion). When you want to load the pre-trained diffusion models from these codebases, please refer to the corresponding codebases for package installation.
 
 ## Getting Started
-Run the command below to train the AMED predictor specified settings. This command can be parallelized across multiple GPUs by adjusting ```--nproc_per_node```. You can find the descriptions to all the parameters in the next section.
+Run the commands in [launch.sh](./launch.sh) for training, sampling and evaluation with recommended settings. 
+All the commands can be parallelized across multiple GPUs by adjusting ```--nproc_per_node```. 
+You can find the descriptions to all the parameters in the next section.
+The required models will be downloaded at ```"./src/dataset_name"``` automatically. 
+We provide some recommended settings below. We use 4 A100 GPUs for all experiments. You may change the batch size based on your devices.
+
+**Note**: `num_steps` is the number of original timestamps. Our method inserts a new timestamp between every two adjacent timestamps, hence num_steps=4 finally gives a total of 7 timestamps (6 sampling steps). So NFE=(5 if afs==True else 6).
+
 ```.bash
-# Train the AMED predictor
-SOLVER_FLAGS="--sampler_stu=ipndm --sampler_tea=ipndm --num_steps=4 --M=2 --afs=True --max_order=4"
+# AMED-Solver
+SOLVER_FLAGS="--sampler_stu=amed --sampler_tea=heun --num_steps=4 --M=1 --afs=True --scale_dir=0.01 --scale_time=0"
+SCHEDULE_FLAGS="--schedule_type=time_uniform --schedule_rho=1"
+torchrun --standalone --nproc_per_node=4 --master_port=11111 \
+train.py --dataset_name="cifar10" --batch=128 --total_kimg=10 $SOLVER_FLAGS $SCHEDULE_FLAGS
+```
+
+```.bash
+# AMED-Plugin applied on iPNDM
+SOLVER_FLAGS="--sampler_stu=ipndm --sampler_tea=ipndm --num_steps=4 --M=2 --afs=True --scale_dir=0 --scale_time=0.2"
 SCHEDULE_FLAGS="--schedule_type=polynomial --schedule_rho=7"
 ADDITIONAL_FLAGS="--max_order=4"
-GUIDANCE_FLAGS=""
-torchrun --standalone --nproc_per_node=1 train.py \
---dataset_name="name of the dataset" \
---model_path="/path/to/your/model" \
---batch=64 \
---total_kimg=10 \
---scale_time=True \
-$SOLVER_FLAGS \
-$SCHEDULE_FLAGS \
-$ADDITIONAL_FLAGS \
-$GUIDANCE_FLAGS
+torchrun --standalone --nproc_per_node=4 --master_port=11111 \
+train.py --dataset_name="cifar10" --batch=128 --total_kimg=10 $SOLVER_FLAGS $SCHEDULE_FLAGS $ADDITIONAL_FLAGS
 ```
 
-After finishing the training, the AMED predictor will be saved at "./exps" with a five digit experiment number (e.g. 00001) by default. The setting of the solver for sampling is stored in the predictor. You can perform accelerated sampling with the trained AMED predictor by inputting the path or the exp number (e.g. 1) of the AMED predictor in ```--predictor_path```:
+After finishing the training, the AMED predictor will be saved at "./exps" with a five digit experiment number (e.g. 00001). 
+The settings for sampling are stored in the predictor. You can sample with the AMED predictor by giving the file path 
+or the exp number (e.g. 1) of the AMED predictor in `--predictor_path`.
+
 ```.bash
-torchrun --standalone --nproc_per_node=1 sample.py \
---predictor_path="/path/or/exp/number/of/AMED/predictor" \
---model_path="/path/to/your/model" \
---dataset_name="name of the dataset" \
---batch=64 \
---seeds="0-49999" \
+# Generate 50K samples for FID evaluation
+torchrun --standalone --nproc_per_node=4 --master_port=22222 \
+sample.py --predictor_path=1 --batch=128 --seeds="0-49999"
 ```
 
-To compute Fréchet inception distance (FID) for a given model and sampler, first generate 50000 random images and then compare them against the dataset reference statistics using ```fid.py```:
+The generated images will be stored at ```"./samples"``` by default. To compute Fréchet inception distance (FID) for a given model and sampler, compare the generated 50k images against the dataset reference statistics using ```fid.py```:
 ```.bash
 # FID evaluation
 python fid.py calc --images=path/to/images --ref=path/to/fid/stat
 ```
 
+
+We also provide a script for calculating the CLIP score for Stable Diffusion with 30k images using the provided prompts:
+```.bash
+# CLIP score
+python clip_score.py calc --images=path/to/images
+```
+
+
 ## Description of Parameters
 | Name | Paramater | Default | Description |
 |------|-----------|---------|-------------|
-|General options|dataset_name|None|One in ['cifar10', 'ffhq', 'imagenet64', 'lsun_bedroom', 'lsun_cat', 'imagenet256', 'lsun_bedroom_ldm', 'ms_coco']|
+|General options|dataset_name|None|One in ['cifar10', 'ffhq', 'afhqv2', 'imagenet64', 'lsun_bedroom', 'imagenet256', 'lsun_bedroom_ldm', 'ms_coco']|
 |               |predictor_path|None|Path or the experiment number of the trained AMED predictor|
-|               |model_path|None|Path to the pre-trained diffusion models|
 |               |batch|64|Total batch size|
 |               |seeds|0-63|Specify a different random seed for each image|
 |               |grid|False|Organize the generated images as grid|
 |               |total_kimg|10|Total training images (k)|
-|               |scale_time|False|Whether to train an additional parameter to scale the input time in the diffusion models|
+|               |scale_dir|0.01|Control the scale of gradient diretion (c_n in the paper). c_n locates in [1-scale_dir, 1+scale_dir]|
+|               |scale_time|0|Control the scale of the input time (a_n the paper). a_n locates in [1-scale_time, 1+scale_time]|
 |SOLVER_FLAGS|sampler_stu|'amed'|Student solver. One in ['amed', 'dpm', 'dpmpp', 'euler', 'ipndm']|
 |            |sampler_tea|'heun'|Teacher solver. One in ['heun', 'dpm', 'dpmpp', 'euler', 'ipndm']|
-|            |num_steps|4|Number of timestamps for the student solver. **When num_steps=N, there will be finally 2(N-1) sampling steps since the AMED predictor will insert one intermediate step between two adjacent steps for the student solver**. The exact NFE depends on the chosen solver|
+|            |num_steps|4|Number of timestamps for the student solver. **When num_steps=N, there will be finally 2(N-1) sampling steps since the AMED predictor will insert one intermediate step between two adjacent steps for the student solver**|
 |            |M|1|How many intermediate time steps to insert between two adjacent steps for the teacher solver|
 |            |afs|False|Whether to use AFS which saves the first model evaluation|
-|SCHEDULE_FLAGS|sigma_min|0.002|Lowest noise level. Specified when loading the pre-trained models|
-|              |sigma_max|80.|Highest noise level. Specified when loading the pre-trained models|
-|              |schedule_type|'polynomial'|Time discretization schedule. One in ['polynomial', 'logsnr', 'time_uniform', 'discrete']|
+|SCHEDULE_FLAGS|schedule_type|'polynomial'|Time discretization schedule. One in ['polynomial', 'logsnr', 'time_uniform', 'discrete']|
 |              |schedule_rho|7|Time step exponent. Need to be specified when schedule_type in ['polynomial', 'time_uniform', 'discrete']|
 |ADDITIONAL_FLAGS|max_order|None|Option for multi-step solvers. 1<=max_order<=4 for iPNDM, 1<=max_order<=3 for DPM-Solver++|
-|                |predict_x0|True|Option for DPM-Solver++. Whether to use the data prediction formulation.|
-|                |lower_order_final|True|Option for DPM-Solver++. Whether to lower the order at the final stages of sampling.|
+|                |predict_x0|True|Option for DPM-Solver++. Whether to use the data prediction formulation|
+|                |lower_order_final|True|Option for DPM-Solver++. Whether to lower the order at the final stages of sampling|
 |GUIDANCE_FLAGS|guidance_type|None|One in ['cg', 'cfg', 'uncond', None]. 'cg' for classifier-guidance, 'cfg' for classifier-free-guidance used in Stable Diffusion, and 'uncond' for unconditional used in LDM|
 |              |guidance_rate|None|Guidance rate|
-|              |classifier_path|None|Path to the pre-trained classifier used for classifier-guidance|
-|              |prompt_path|None|Path to MS-COCO_val2014_30k_captions.csv for training on Stable Diffusion|
+|              |prompt|None|Prompt for Stable Diffusion sampling|
 
 ## Performance
 <img src="assets/fid.jpg" alt="fid" width="800" >
@@ -89,20 +100,25 @@ For CIFAR-10, FFHQ64 and ImageNet64, we provide our [pre-trained AMED predictors
 We perform sampling on a variaty of pre-trained diffusion models from different codebases including
 [EDM](https://github.com/NVlabs/edm), [ADM](https://github.com/openai/guided-diffusion), [Consistency models](https://github.com/openai/consistency_models), [LDM](https://github.com/CompVis/latent-diffusion) and [Stable Diffusion](https://github.com/CompVis/stable-diffusion). The tested pre-trained models are listed below:
 
-| Codebase | Dataset | Resolusion | Pre-trained Models | Description |
+| Codebase | dataset_name | Resolusion | Pre-trained Models | Description |
 |----------|---------|------------|--------------------|-------------|
-|EDM|CIFAR10|32|[edm-cifar10-32x32-uncond-vp.pkl](https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-cifar10-32x32-uncond-vp.pkl)
-|EDM|FFHQ|64|[edm-ffhq-64x64-uncond-vp.pkl](https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-ffhq-64x64-uncond-vp.pkl)
-|EDM|ImageNet|64|[edm-imagenet-64x64-cond-adm.pkl](https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-imagenet-64x64-cond-adm.pkl)
-|Consistency Models|LSUN_bedroom|256|[edm_bedroom256_ema.pt](https://openaipublic.blob.core.windows.net/consistency/edm_bedroom256_ema.pt)|Pixel-space
-|ADM|ImageNet|256|[256x256_diffusion.pt](https://openaipublic.blob.core.windows.net/diffusion/jul-2021/256x256_diffusion.pt) and [256x256_classifier.pt](https://openaipublic.blob.core.windows.net/diffusion/jul-2021/256x256_classifier.pt)|Classifier-guidance.
-|LDM|LSUN_bedroom|256|[lsun_bedroom.pt](https://openaipublic.blob.core.windows.net/diffusion/jul-2021/lsun_bedroom.pt) and [vq-f4 model](https://ommer-lab.com/files/latent-diffusion/vq-f4.zip)|Latent-space
-|Stable Diffusion|MS-COCO|512|[stable-diffusion-v1-4](https://huggingface.co/CompVis/stable-diffusion-v1-4)|Classifier-free-guidance
+|EDM|cifar10|32|[edm-cifar10-32x32-uncond-vp.pkl](https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-cifar10-32x32-uncond-vp.pkl)
+|EDM|ffhq|64|[edm-ffhq-64x64-uncond-vp.pkl](https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-ffhq-64x64-uncond-vp.pkl)
+|EDM|afhqv2|64|[edm-afhqv2-64x64-uncond-vp.pkl](https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-afhqv2-64x64-uncond-vp.pkl)
+|EDM|imagenet64|64|[edm-imagenet-64x64-cond-adm.pkl](https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-imagenet-64x64-cond-adm.pkl)
+|Consistency Models|lsun_bedroom|256|[edm_bedroom256_ema.pt](https://openaipublic.blob.core.windows.net/consistency/edm_bedroom256_ema.pt)|Pixel-space
+|ADM|imagenet256|256|[256x256_diffusion.pt](https://openaipublic.blob.core.windows.net/diffusion/jul-2021/256x256_diffusion.pt) and [256x256_classifier.pt](https://openaipublic.blob.core.windows.net/diffusion/jul-2021/256x256_classifier.pt)|Classifier-guidance.
+|LDM|lsun_bedroom_ldm|256|[lsun_bedrooms.zip](https://ommer-lab.com/files/latent-diffusion/lsun_bedrooms.zip)|Latent-space
+|Stable Diffusion|ms_coco|512|[stable-diffusion-v1-5](https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.ckpt)|Classifier-free-guidance
 
-Place the downloaded vq-f4 model at `./models/ldm_models/first_stage_models/vq-f4/model.ckpt`
 
 ## FID Statistics
 For facilitating the FID evaluation of diffusion models, we provide our [FID statistics](https://drive.google.com/drive/folders/1f8qf5qtUewCdDrkExK_Tk5-qC-fNPKpL?usp=sharing) of various datasets. They are collected on the Internet or made by ourselves with the guidance of the [EDM](https://github.com/NVlabs/edm) codebase. 
+
+You can compute the reference statistics for your own datasets as follows:
+```
+python fid.py ref --data=path/to/my-dataset.zip --dest=path/to/save/my-dataset.npz
+```
 
 ## Citation
 If you find this repository useful, please consider citing the following paper:

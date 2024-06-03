@@ -9,10 +9,13 @@ import pickle
 import numpy as np
 import torch
 import dnnlib
+import random
+from torch import autocast
 from torch_utils import distributed as dist
 from torch_utils import training_stats
 from torch_utils import misc
 from models.ldm.util import instantiate_from_config
+from torch_utils.download_util import check_file_by_key
 
 #----------------------------------------------------------------------------
 # Load pre-trained models from the LDM codebase (https://github.com/CompVis/latent-diffusion) 
@@ -35,6 +38,47 @@ def load_ldm_model(config, ckpt, verbose=False):
 
 #----------------------------------------------------------------------------
 
+def create_model(dataset_name=None, guidance_type=None, guidance_rate=None, device=None):
+    model_path, classifier_path = check_file_by_key(dataset_name)
+    dist.print0(f'Loading the pre-trained diffusion model from "{model_path}"...')
+
+    if dataset_name in ['cifar10', 'ffhq', 'afhqv2', 'imagenet64']:         # models from EDM
+        with dnnlib.util.open_url(model_path, verbose=(dist.get_rank() == 0)) as f:
+            net = pickle.load(f)['ema'].to(device)
+        net.sigma_min = 0.002
+        net.sigma_max = 80.0
+    elif dataset_name in ['lsun_bedroom']:                                  # models from Consistency Models
+        from models.cm.cm_model_loader import load_cm_model
+        from models.networks_edm import CMPrecond
+        net = load_cm_model(model_path)
+        net = CMPrecond(net).to(device)
+    else:
+        if guidance_type == 'cg':            # clssifier guidance           # models from ADM
+            assert classifier_path is not None
+            from models.guided_diffusion.cg_model_loader import load_cg_model
+            from models.networks_edm import CGPrecond
+            net, classifier = load_cg_model(model_path, classifier_path)
+            net = CGPrecond(net, classifier, guidance_rate=guidance_rate).to(device)
+        elif guidance_type in ['uncond', 'cfg']:                            # models from LDM
+            from omegaconf import OmegaConf
+            from models.networks_edm import CFGPrecond
+            if dataset_name in ['lsun_bedroom_ldm']:
+                config = OmegaConf.load('./models/ldm/configs/latent-diffusion/lsun_bedrooms-ldm-vq-4.yaml')
+                net = load_ldm_model(config, model_path)
+                net = CFGPrecond(net, img_resolution=64, img_channels=3, guidance_rate=1., guidance_type='uncond', label_dim=0).to(device)
+            elif dataset_name in ['ms_coco']:
+                assert guidance_type == 'cfg'
+                config = OmegaConf.load('./models/ldm/configs/stable-diffusion/v1-inference.yaml')
+                net = load_ldm_model(config, model_path)
+                net = CFGPrecond(net, img_resolution=64, img_channels=4, guidance_rate=guidance_rate, guidance_type='classifier-free', label_dim=True).to(device)
+    if net is None:
+        raise ValueError("Got wrong settings: check dataset_name and guidance_type!")
+    net.eval()
+
+    return net
+
+#----------------------------------------------------------------------------
+
 def training_loop(
     run_dir             = '.',      # Output directory.
     AMED_kwargs         = {},       # Options for AMED predictor.
@@ -49,9 +93,7 @@ def training_loop(
     state_dump_ticks    = 20,       # How often to dump training state, None = disable.
     cudnn_benchmark     = True,     # Enable torch.backends.cudnn.benchmark?
     dataset_name        = None,
-    model_path          = None,
     prompt_path         = None,
-    classifier_path     = None,
     guidance_type       = None,
     guidance_rate       = 0.,
     device              = torch.device('cuda'),
@@ -74,57 +116,22 @@ def training_loop(
     assert batch_size == batch_gpu * num_accumulation_rounds * dist.get_world_size()
    
     if dataset_name in ['ms_coco']:
-        # Loading MS-COCO captions
+        # Loading MS-COCO captions for FID-30k evaluaion
         # We use the selected 30k captions from https://github.com/boomb0om/text2image-benchmark
-        assert prompt_path is not None, "Path to MS-COCO_val2014_30k_captions.csv required for training"
-        dist.print0(f"Loading MS-COCO 30k captions from {prompt_path}...")
+        prompt_path, _ = check_file_by_key('prompts')
         sample_captions = []
         with open(prompt_path, 'r') as file:
             reader = csv.DictReader(file)
             for row in reader:
                 text = row['text']
                 sample_captions.append(text)
-        sample_captions_local = sample_captions[dist.get_rank() * 30000 // dist.get_world_size() : (dist.get_rank() + 1) * 30000 // dist.get_world_size()]
-
+    
     # Load pre-trained diffusion model.
-    net = None
-    dist.print0(f'Loading the pre-trained diffusion model from "{model_path}"...')
     if dist.get_rank() != 0:
         torch.distributed.barrier()     # rank 0 goes first
-    if dataset_name in ['cifar10', 'ffhq', 'afhqv2', 'imagenet64']:         # models from EDM
-        with dnnlib.util.open_url(model_path, verbose=(dist.get_rank() == 0)) as f:
-            net = pickle.load(f)['ema'].to(device)
-        net.sigma_min = 0.002
-        net.sigma_max = 80.0
-    elif dataset_name in ['lsun_bedroom', 'lsun_cat']:                      # models from Consistency Models
-        from models.cm.cm_model_loader import load_cm_model
-        from models.networks_edm import CMPrecond
-        net = load_cm_model(model_path)
-        net = CMPrecond(net).to(device)
-    else:
-        if guidance_type == 'cg':            # clssifier guidance           # models from ADM
-            assert classifier_path is not None
-            from models.guided_diffusion.cg_model_loader import load_cg_model
-            from models.networks_edm import CGPrecond
-            net, classifier = load_cg_model(model_path, classifier_path)
-            net = CGPrecond(net, classifier, guidance_rate=guidance_rate).to(device)
-        elif guidance_type in ['uncond', 'cfg']:                            # models from LDM
-            from torch import autocast
-            from omegaconf import OmegaConf
-            from models.networks_edm import CFGPrecond
-            precision_scope = autocast
-            if dataset_name in ['lsun_bedroom_ldm']:
-                config = OmegaConf.load('./models/ldm/configs/latent-diffusion/lsun_bedrooms-ldm-vq-4.yaml')
-                net = load_ldm_model(config, model_path)
-                net = CFGPrecond(net, img_resolution=64, img_channels=3, guidance_rate=1., guidance_type='uncond', label_dim=0).to(device)
-            elif dataset_name in ['ms_coco']:
-                assert guidance_type == 'cfg'
-                config = OmegaConf.load('./models/ldm/configs/stable-diffusion/v1-inference.yaml')
-                net = load_ldm_model(config, model_path)
-                net = CFGPrecond(net, img_resolution=64, img_channels=4, guidance_rate=guidance_rate, guidance_type='classifier-free', label_dim=True).to(device)
-    if net is None:
-        raise ValueError("Got wrong settings: check dataset_name and guidance_type!")
-    net.eval()
+    
+    # Load pre-trained diffusion models.
+    net = create_model(dataset_name, guidance_type, guidance_rate, device)
     
     if dist.get_rank() == 0:
         torch.distributed.barrier()     # other ranks follow
@@ -156,37 +163,36 @@ def training_loop(
     dist.update_progress(cur_nimg // 1000, total_kimg)
     stats_jsonl = None
     while True:
+
+        # Generate latents and conditions in every first step
+        latents = loss_fn.sigma_max * torch.randn([batch_gpu, net.img_channels, net.img_resolution, net.img_resolution], device=device)
+        labels = c = uc = None
+        if net.label_dim:
+            if guidance_type == 'cg':                                           # ADM models
+                labels = torch.randint(net.label_dim, size=(batch_gpu,), device=device)
+            elif guidance_type == 'cfg' and dataset_name in ['ms_coco']:        # Stable Diffusion (SD) models
+                prompts = random.sample(sample_captions, batch_gpu)
+                uc = None
+                if guidance_rate != 1.0:
+                    uc = net.model.get_learned_conditioning(batch_gpu * [""])
+                if isinstance(prompts, tuple):
+                    prompts = list(prompts)
+                c = net.model.get_learned_conditioning(prompts)
+            else:                                                               # EDM models
+                labels = torch.eye(net.label_dim, device=device)[torch.randint(net.label_dim, size=[batch_gpu], device=device)]
+
+        # Generate teacher trajectories in every first step
+        with torch.no_grad():
+            if guidance_type in ['uncond', 'cfg']:      # LDM and SD models
+                with autocast("cuda"):
+                    with net.model.ema_scope():
+                        teacher_traj = loss_fn.get_teacher_traj(net=net, tensor_in=latents, labels=labels, condition=c, unconditional_condition=uc)
+            else:
+                teacher_traj = loss_fn.get_teacher_traj(net=net, tensor_in=latents, labels=labels)
+
         # Perform training step by step
         for step_idx in range(loss_fn.num_steps - 1):
             optimizer.zero_grad(set_to_none=True)
-            if step_idx == 0:
-                # Generate latents and conditions in every first step
-                latents = loss_fn.sigma_max * torch.randn([batch_gpu, net.img_channels, net.img_resolution, net.img_resolution], device=device)
-                labels = None
-                c = uc = None
-                if net.label_dim:
-                    if guidance_type == 'cg':                                           # ADM models
-                        labels = torch.randint(net.label_dim, size=(batch_gpu,), device=device)
-                    elif guidance_type == 'cfg' and dataset_name in ['ms_coco']:        # Stable Diffusion (SD) models
-                        prompts = sample_captions_local[cur_nimg:cur_nimg+batch_gpu]
-                        uc = None
-                        if guidance_rate != 1.0:
-                            uc = net.model.get_learned_conditioning(batch_gpu * [""])
-                        if isinstance(prompts, tuple):
-                            prompts = list(prompts)
-                        c = net.model.get_learned_conditioning(prompts)
-                    else:                                                               # EDM models
-                        labels = torch.eye(net.label_dim, device=device)[torch.randint(net.label_dim, size=[batch_gpu], device=device)]
-
-                # Generate teacher trajectories in every first step
-                with torch.no_grad():
-                    if guidance_type in ['uncond', 'cfg']:      # LDM and SD models
-                        with precision_scope("cuda"):
-                            with net.model.ema_scope():
-                                teacher_traj = loss_fn.get_teacher_traj(net=net, tensor_in=latents, labels=labels, condition=c, unconditional_condition=uc)
-                    else:
-                        teacher_traj = loss_fn.get_teacher_traj(net=net, tensor_in=latents, labels=labels)
-
             # Calculate loss
             for round_idx in range(num_accumulation_rounds):
                 with misc.ddp_sync(ddp, (round_idx == num_accumulation_rounds - 1)):
@@ -237,7 +243,7 @@ def training_loop(
             dist.print0('Aborting...')
             
         # Save network snapshot.
-        if (snapshot_ticks is not None) and (done or cur_tick % snapshot_ticks == 0):
+        if (snapshot_ticks is not None) and (done or cur_tick % snapshot_ticks == 0) and cur_tick > 0:
             data = dict(model=AMED_predictor, loss_fn=loss_fn)
             for key, value in data.items():
                 if isinstance(value, torch.nn.Module):
@@ -251,8 +257,8 @@ def training_loop(
             del data # conserve memory
 
         # Save full dump of the training state.
-        if (state_dump_ticks is not None) and (done or cur_tick % state_dump_ticks == 0) and cur_tick != 0 and dist.get_rank() == 0:
-            torch.save(dict(net=AMED_predictor, optimizer_state=optimizer.state_dict()), os.path.join(run_dir, f'training-state-{cur_nimg//1000:06d}.pt'))
+        # if (state_dump_ticks is not None) and (done or cur_tick % state_dump_ticks == 0) and cur_tick != 0 and dist.get_rank() == 0:
+        #     torch.save(dict(net=AMED_predictor, optimizer_state=optimizer.state_dict()), os.path.join(run_dir, f'training-state-{cur_nimg//1000:06d}.pt'))
 
         # Update logs.
         training_stats.default_collector.update()

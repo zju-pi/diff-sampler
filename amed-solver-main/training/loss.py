@@ -66,7 +66,6 @@ class AMED_loss:
             class_labels=labels, 
             condition=condition, 
             unconditional_condition=unconditional_condition,
-            randn_like=torch.randn_like, 
             num_steps=2,
             sigma_min=t_next, 
             sigma_max=t_cur, 
@@ -88,10 +87,14 @@ class AMED_loss:
         self.buffer_t = buffer_t
         
         loss = (student_out - teacher_out) ** 2
-        dist.print0(step_idx.item(), torch.mean(torch.norm(loss, p=2, dim=(1, 2, 3))).item(), \
-                    [r.mean().item(), r.std().item()], \
-                    [scale_dir.mean().item(), scale_dir.std().item()], \
-                    [scale_time.mean().item(), scale_time.std().item()])
+        dist.print0("Step: {} | Loss: {:8.4f} | r (mean std): {:5.4f} {:5.4f} | scale_dir (mean std): {:5.4f} {:5.4f} | scale_time (mean std): {:5.4f} {:5.4f}".format(
+                step_idx.item(), 
+                torch.mean(torch.norm(loss, p=2, dim=(1, 2, 3))).item(), 
+                r.mean().item(), r.std().item(),
+                scale_dir.mean().item(), scale_dir.std().item(),
+                scale_time.mean().item(), scale_time.std().item()
+            )
+        )
         
         return loss, student_out.detach()
     
@@ -109,7 +112,6 @@ class AMED_loss:
             class_labels=labels, 
             condition=condition, 
             unconditional_condition=unconditional_condition, 
-            randn_like=torch.randn_like, 
             num_steps=self.num_steps_teacher, 
             sigma_min=self.sigma_min, 
             sigma_max=self.sigma_max, 

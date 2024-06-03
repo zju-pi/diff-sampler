@@ -1,10 +1,10 @@
-################# A. Generate a grid of samples ##################
+################# A. Generate a grid of samples #################
 # Supported datasets are "cifar10", "ffhq", "afhqv2", "imagenet64", "imagenet256", "lsun_bedroom", 
 # "lsun_cat", "lsun_bedroom_ldm", "ffhq_ldm", "ms_coco"(Stable Diffusion)
 
 # A.1. Commands for generating samples on CIFAR-10 (and other EDM models) with different solvers
 # Below we use recommended settings for each solver as example, but you can adjust them if needed
-# DDIM (num_steps is the number of timestamps, hence num_steps=7 equals 6 steps)
+# DDIM ("num_steps" is the number of timestamps, hence num_steps=7 equals 6 steps)
 SOLVER_FLAGS="--solver=euler --num_steps=7 --afs=False"
 SCHEDULE_FLAGS="--schedule_type=polynomial --schedule_rho=7"
 python sample.py --dataset_name="cifar10" --batch=64 --seeds="0-63" --grid=True $SOLVER_FLAGS $SCHEDULE_FLAGS
@@ -88,8 +88,8 @@ python sample.py --dataset_name="lsun_bedroom_ldm" --batch=4 --seeds="0-3" --gri
 SOLVER_FLAGS="--solver=ipndm --num_steps=6 --afs=False"
 SCHEDULE_FLAGS="--schedule_type=polynomial --schedule_rho=7"
 ADDITIONAL_FLAGS="--max_order=4"
-torchrun --standalone --nproc_per_node=1 sample.py \
---dataset_name="cifar10" --batch=128 --seeds="0-49999" $SOLVER_FLAGS $SCHEDULE_FLAGS $ADDITIONAL_FLAGS 
+torchrun --standalone --nproc_per_node=1 --master_port=11111 \
+sample.py --dataset_name="cifar10" --batch=128 --seeds="0-49999" $SOLVER_FLAGS $SCHEDULE_FLAGS $ADDITIONAL_FLAGS 
 
 # B.2. on Stable Diffusion (usually 30k or 5k images are required)
 # For Stable Diffusion 1 step = 2 NFE due to the classifier-free guidance
@@ -97,23 +97,28 @@ SOLVER_FLAGS="--solver=dpmpp --num_steps=5 --afs=False"
 SCHEDULE_FLAGS="--schedule_type=discrete --schedule_rho=1"
 ADDITIONAL_FLAGS="--max_order=2 --predict_x0=False --lower_order_final=True"
 GUIDANCE_FLAGS="--guidance_type=cfg --guidance_rate=7.5"
-torchrun --standalone --nproc_per_node=1 sample.py \
---dataset_name="ms_coco" --batch=4 --seeds="0-29999" $SOLVER_FLAGS $SCHEDULE_FLAGS $ADDITIONAL_FLAGS $GUIDANCE_FLAGS
+torchrun --standalone --nproc_per_node=1 --master_port=11111 \
+sample.py --dataset_name="ms_coco" --batch=4 --seeds="0-29999" $SOLVER_FLAGS $SCHEDULE_FLAGS $ADDITIONAL_FLAGS $GUIDANCE_FLAGS
 
 
 
 
-################# C. Use your own prompt for text-to-image generation ##################
+################# C. Use your own prompt for text-to-image generation #################
 SOLVER_FLAGS="--solver=dpmpp --num_steps=6 --afs=False"
 SCHEDULE_FLAGS="--schedule_type=discrete --schedule_rho=1"
 ADDITIONAL_FLAGS="--max_order=2 --predict_x0=False --lower_order_final=True"
 GUIDANCE_FLAGS="--guidance_type=cfg --guidance_rate=7.5"
-torchrun --standalone --nproc_per_node=1 sample.py --dataset_name="ms_coco" --batch=4 --seeds="0-3" --grid=True \
+torchrun --standalone --nproc_per_node=1 --master_port=11111 \
+sample.py --dataset_name="ms_coco" --batch=4 --seeds="0-3" --grid=True \
 --prompt="a photograph of an astronaut riding a horse" \
 $SOLVER_FLAGS $SCHEDULE_FLAGS $ADDITIONAL_FLAGS $GUIDANCE_FLAGS
 
 
 
 
-################# D. FID evaluation #################
+################# D. Evaluation #################
+# D.1. FID
 python fid.py calc --images="path/to/images" --ref="path/to/fid/stat"
+
+# D.2. CLIP score
+python clip_score.py calc --images="path/to/images"

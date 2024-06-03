@@ -27,16 +27,31 @@ def get_amed_prediction(AMED_predictor, t_cur, t_next, net, unet_enc_out, use_af
         unet_enc = torch.mean(unet_enc_out[-1], dim=1) if not use_afs else torch.zeros((batch_size, 8, 8), device=t_cur.device)
         output = AMED_predictor(unet_enc, t_cur, t_next)
     output_list = [*output]
+    
     if len(output_list) == 2:
-        r, scale_dir = output_list
-        r = r.reshape(-1, 1, 1, 1)
-        scale_dir = scale_dir.reshape(-1, 1, 1, 1)
-        scale_time = torch.ones_like(scale_dir)
+        try:
+            use_scale_time = AMED_predictor.module.scale_time
+        except:
+            use_scale_time = AMED_predictor.scale_time
+        if use_scale_time:
+            r, scale_time = output_list
+            r = r.reshape(-1, 1, 1, 1)
+            scale_time = scale_time.reshape(-1, 1, 1, 1)
+            scale_dir = torch.ones_like(scale_time)
+        else:
+            r, scale_dir = output_list
+            r = r.reshape(-1, 1, 1, 1)
+            scale_dir = scale_dir.reshape(-1, 1, 1, 1)
+            scale_time = torch.ones_like(scale_dir)
     elif len(output_list) == 3:
         r, scale_dir, scale_time = output_list
         r = r.reshape(-1, 1, 1, 1)
         scale_dir = scale_dir.reshape(-1, 1, 1, 1)
         scale_time = scale_time.reshape(-1, 1, 1, 1)
+    else:
+        r = output.reshape(-1, 1, 1, 1)
+        scale_dir = torch.ones_like(r)
+        scale_time = torch.ones_like(r)
     return r, scale_dir, scale_time
 
 #----------------------------------------------------------------------------
@@ -57,7 +72,6 @@ def amed_sampler(
     class_labels=None,
     condition=None, 
     unconditional_condition=None,
-    randn_like=torch.randn_like, 
     num_steps=None, 
     sigma_min=0.002, 
     sigma_max=80, 
@@ -80,7 +94,6 @@ def amed_sampler(
         class_labels: A pytorch tensor. The condition for conditional sampling or guided sampling.
         condition: A pytorch tensor. The condition to the model used in LDM and Stable Diffusion
         unconditional_condition: A pytorch tensor. The unconditional condition to the model used in LDM and Stable Diffusion
-        randn_like: A random tensor generator.
         num_steps: A `int`. The total number of the time steps with `num_steps-1` spacings. 
         sigma_min: A `float`. The ending sigma during samping.
         sigma_max: A `float`. The starting sigma during sampling.
@@ -153,7 +166,6 @@ def euler_sampler(
     class_labels=None, 
     condition=None, 
     unconditional_condition=None,
-    randn_like=torch.randn_like, 
     num_steps=None, 
     sigma_min=0.002, 
     sigma_max=80, 
@@ -176,7 +188,6 @@ def euler_sampler(
         class_labels: A pytorch tensor. The condition for conditional sampling or guided sampling.
         condition: A pytorch tensor. The condition to the model used in LDM and Stable Diffusion
         unconditional_condition: A pytorch tensor. The unconditional condition to the model used in LDM and Stable Diffusion
-        randn_like: A random tensor generator.
         num_steps: A `int`. The total number of the time steps with `num_steps-1` spacings. 
         sigma_min: A `float`. The ending sigma during samping.
         sigma_max: A `float`. The starting sigma during sampling.
@@ -254,7 +265,6 @@ def ipndm_sampler(
     class_labels=None, 
     condition=None, 
     unconditional_condition=None,
-    randn_like=torch.randn_like, 
     num_steps=None, 
     sigma_min=0.002, 
     sigma_max=80, 
@@ -278,7 +288,6 @@ def ipndm_sampler(
         class_labels: A pytorch tensor. The condition for conditional sampling or guided sampling.
         condition: A pytorch tensor. The condition to the model used in LDM and Stable Diffusion
         unconditional_condition: A pytorch tensor. The unconditional condition to the model used in LDM and Stable Diffusion
-        randn_like: A random tensor generator.
         num_steps: A `int`. The total number of the time steps with `num_steps-1` spacings. 
         sigma_min: A `float`. The ending sigma during samping.
         sigma_max: A `float`. The starting sigma during sampling.
@@ -394,7 +403,6 @@ def dpm_2_sampler(
     class_labels=None, 
     condition=None, 
     unconditional_condition=None,
-    randn_like=torch.randn_like, 
     num_steps=None, 
     sigma_min=0.002, 
     sigma_max=80, 
@@ -418,7 +426,6 @@ def dpm_2_sampler(
         class_labels: A pytorch tensor. The condition for conditional sampling or guided sampling.
         condition: A pytorch tensor. The condition to the model used in LDM and Stable Diffusion
         unconditional_condition: A pytorch tensor. The unconditional condition to the model used in LDM and Stable Diffusion
-        randn_like: A random tensor generator.
         num_steps: A `int`. The total number of the time steps with `num_steps-1` spacings. 
         sigma_min: A `float`. The ending sigma during samping.
         sigma_max: A `float`. The starting sigma during sampling.
@@ -494,7 +501,6 @@ def dpm_pp_sampler(
     class_labels=None, 
     condition=None, 
     unconditional_condition=None,
-    randn_like=torch.randn_like, 
     num_steps=None, 
     sigma_min=0.002, 
     sigma_max=80, 
@@ -522,7 +528,6 @@ def dpm_pp_sampler(
         class_labels: A pytorch tensor. The condition for conditional sampling or guided sampling.
         condition: A pytorch tensor. The condition to the model used in LDM and Stable Diffusion
         unconditional_condition: A pytorch tensor. The unconditional condition to the model used in LDM and Stable Diffusion
-        randn_like: A random tensor generator.
         num_steps: A `int`. The total number of the time steps with `num_steps-1` spacings. 
         sigma_min: A `float`. The ending sigma during samping.
         sigma_max: A `float`. The starting sigma during sampling.
@@ -633,7 +638,6 @@ def heun_sampler(
     class_labels=None, 
     condition=None, 
     unconditional_condition=None,
-    randn_like=torch.randn_like, 
     num_steps=None, 
     sigma_min=0.002, 
     sigma_max=80, 
@@ -653,7 +657,6 @@ def heun_sampler(
         class_labels: A pytorch tensor. The condition for conditional sampling or guided sampling.
         condition: A pytorch tensor. The condition to the model used in LDM and Stable Diffusion
         unconditional_condition: A pytorch tensor. The unconditional condition to the model used in LDM and Stable Diffusion
-        randn_like: A random tensor generator.
         num_steps: A `int`. The total number of the time steps with `num_steps-1` spacings. 
         sigma_min: A `float`. The ending sigma during samping.
         sigma_max: A `float`. The starting sigma during sampling.

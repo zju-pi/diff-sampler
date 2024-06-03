@@ -2,7 +2,6 @@ import numpy as np
 import torch
 from torch_utils import persistence
 from torch.nn.functional import silu
-import solvers_amed
 
 #----------------------------------------------------------------------------
 # Unified routine for initializing weights and biases.
@@ -75,7 +74,8 @@ class AMED_predictor(torch.nn.Module):
         schedule_type           = None,
         schedule_rho            = None,
         afs                     = False,
-        scale_time              = True,
+        scale_dir               = 0,
+        scale_time              = 0,
         max_order               = None,
         predict_x0              = True,
         lower_order_final       = True,
@@ -83,6 +83,8 @@ class AMED_predictor(torch.nn.Module):
         super().__init__()
         assert sampler_stu in ['amed', 'dpm', 'dpmpp', 'euler', 'ipndm']
         assert sampler_tea in ['heun', 'dpm', 'dpmpp', 'euler', 'ipndm']
+        assert scale_dir >= 0
+        assert scale_time >= 0
         self.dataset_name = dataset_name
         self.img_resolution = img_resolution
         self.num_steps = num_steps
@@ -94,6 +96,7 @@ class AMED_predictor(torch.nn.Module):
         self.schedule_type = schedule_type
         self.schedule_rho = schedule_rho
         self.afs = afs
+        self.scale_dir = scale_dir
         self.scale_time = scale_time
         self.max_order = max_order
         self.predict_x0 = predict_x0
@@ -108,7 +111,8 @@ class AMED_predictor(torch.nn.Module):
         self.enc_layer1 = Linear(hidden_dim, bottleneck_output_dim)
         
         self.fc_r = Linear(2 * noise_channels + bottleneck_output_dim, output_dim)
-        self.fc_scale_dir = Linear(2 * noise_channels + bottleneck_output_dim, output_dim)
+        if self.scale_dir:
+            self.fc_scale_dir = Linear(2 * noise_channels + bottleneck_output_dim, output_dim)
         if self.scale_time:
             self.fc_scale_time = Linear(2 * noise_channels + bottleneck_output_dim, output_dim)
 
@@ -134,15 +138,18 @@ class AMED_predictor(torch.nn.Module):
         r = self.fc_r(out)
         r = self.sigmoid(r)
 
-        scale_dir = self.fc_scale_dir(out)
-        if self.sampler_stu == 'dpmpp' and self.predict_x0:
-            scale_dir =  self.sigmoid(scale_dir) / 10 + 0.95
-        else:
-            scale_dir =  self.sigmoid(scale_dir) / 50 + 0.99
+        if self.scale_dir:
+            scale_dir = self.fc_scale_dir(out)
+            scale_dir = self.sigmoid(scale_dir) / (1 / (2 * self.scale_dir)) + (1 - self.scale_dir)
+            if not self.scale_time:
+                return r, scale_dir
 
         if self.scale_time:
             scale_time = self.fc_scale_time(out)
-            scale_time = self.sigmoid(scale_time) / 2.5 + 0.8
-            return r, scale_dir, scale_time
-        else:
-            return r, scale_dir
+            scale_time = self.sigmoid(scale_time) / (1 / (2 * self.scale_time)) + (1 - self.scale_time)
+            if not self.scale_dir:
+                return r, scale_time
+            else:
+                return r, scale_dir, scale_time
+
+        return r

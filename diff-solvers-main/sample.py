@@ -184,8 +184,8 @@ def main(dataset_name, max_batch_size, seeds, grid, outdir, subdirs, device=torc
 
     # Load pre-trained diffusion models.
     net, solver_kwargs['model_source'] = create_model(dataset_name, solver_kwargs['guidance_type'], solver_kwargs['guidance_rate'], device)
-    # TODO: currently support fp16 for EDM models, should test it for all models
-    net.use_fp16 = solver_kwargs['use_fp16']
+    # TODO: support mixed precision 
+    # net.use_fp16 = solver_kwargs['use_fp16']
 
     # Other ranks follow.
     if dist.get_rank() == 0:

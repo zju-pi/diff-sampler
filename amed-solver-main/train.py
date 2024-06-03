@@ -16,7 +16,6 @@ warnings.filterwarnings('ignore', 'Grad strides do not match bucket view strides
 
 # General options.
 @click.option('--dataset_name',     help='Dataset name', metavar='STR',                                type=click.Choice(['cifar10', 'ffhq', 'afhqv2', 'imagenet64', 'lsun_bedroom', 'lsun_cat', 'imagenet256', 'ms_coco', 'lsun_bedroom_ldm']), required=True)
-@click.option('--model_path',       help='Path to pre-trained diffusion model', metavar='DIR',         type=str, required=True)
 @click.option('--outdir',           help='Where to save the results', metavar='DIR',                   type=str, default='./exps')
 @click.option('--total_kimg',       help='Number of images (k) for training', metavar='INT',           type=int, default=10)
 @click.option('--prompt_path',      help='Path to MS-COCO_val2014_30k_captions.csv', metavar='DIR',    type=str)
@@ -30,9 +29,10 @@ warnings.filterwarnings('ignore', 'Grad strides do not match bucket view strides
 @click.option('--guidance_rate',    help='Guidance rate', metavar='FLOAT',                             type=float, default=0.)
 @click.option('--classifier_path',  help='Path to pre-trained classifier model', metavar='DIR',        type=str)
 @click.option('--schedule_type',    help='Time discretization schedule', metavar='STR',                type=click.Choice(['polynomial', 'logsnr', 'time_uniform', 'discrete']), default='polynomial', show_default=True)
-@click.option('--schedule_rho',     help='Time step exponent', metavar='FLOAT',                        type=click.FloatRange(min=0, min_open=True), default=7, show_default=True)
+@click.option('--schedule_rho',     help='Time step exponent', metavar='FLOAT',                        type=click.FloatRange(min=0), default=7, show_default=True)
 @click.option('--afs',              help='Whether to use afs', metavar='BOOL',                         type=bool, default=True, show_default=True)
-@click.option('--scale_time',       help='Whether to scale the input time', metavar='BOOL',            type=bool, default=True, show_default=True)
+@click.option('--scale_dir',        help='Scale the gradient by [1-scale_dir, 1+scale_dir]', metavar='FLOAT',     type=click.FloatRange(min=0), default=0.01, show_default=True)
+@click.option('--scale_time',       help='Scale the gradient by [1-scale_time, 1+scale_time]', metavar='FLOAT',   type=click.FloatRange(min=0), default=0, show_default=True)
 # Additional options for multi-step solvers, 1<=max_order<=4 for iPNDM, 1<=max_order<=3 for DPM-Solver++
 @click.option('--max_order',        help='max order for solvers', metavar='INT',                       type=click.IntRange(min=1), default=3)
 # Additional options for DPM-Solver++
@@ -72,8 +72,8 @@ def main(**kwargs):
     c.AMED_kwargs.update(num_steps=opts.num_steps, sampler_stu=opts.sampler_stu, sampler_tea=opts.sampler_tea, \
                          M=opts.m, guidance_type=opts.guidance_type, guidance_rate=opts.guidance_rate, \
                          schedule_rho=opts.schedule_rho, schedule_type=opts.schedule_type, afs=opts.afs, \
-                         dataset_name=opts.dataset_name, scale_time=opts.scale_time, max_order=opts.max_order, \
-                         predict_x0=opts.predict_x0, lower_order_final=opts.lower_order_final)
+                         dataset_name=opts.dataset_name, scale_dir=opts.scale_dir, scale_time=opts.scale_time, \
+                         max_order=opts.max_order, predict_x0=opts.predict_x0, lower_order_final=opts.lower_order_final)
     c.loss_kwargs.class_name = 'training.loss.AMED_loss'
 
     # Training options.
@@ -152,7 +152,6 @@ def main(**kwargs):
         dnnlib.util.Logger(file_name=os.path.join(c.run_dir, 'log.txt'), file_mode='a', should_flush=True)
 
     # Train.
-    c.model_path = opts.model_path
     training_loop.training_loop(**c)
 
 #----------------------------------------------------------------------------
