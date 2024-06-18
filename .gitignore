@@ -5,3 +5,4 @@ samples/
 test/
 *.ckpt
 *.py[cod]
+.DS_Store

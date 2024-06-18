@@ -8,7 +8,10 @@ This repository also includes (or will include) the official implementations of 
 - [x] [ICML 2024] [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326)
 
 ## News
-- **2024-06-18**. The official implementation of the paper [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326) is released in [gits-main](./gits-main/). This new repo is built on the basis of [diff-solvers-main](./diff-solvers-main/), supporting baseline sampling as well as customized time schedule. Our method (GITS) offers a more efficient time schedule for fast sampling of diffusion models.
+- **2024-06-18**. The official implementation of the paper [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326) is released in [gits-main](./gits-main/). 
+  - This new repo is built on the basis of [diff-solvers-main](./diff-solvers-main/), supporting baseline sampling as well as customized time schedule. Our method (GITS) offers a more efficient time schedule for fast sampling of diffusion models.
+  - For text-to-image generation, we provide a [colab script](https://colab.research.google.com/drive/1dxyVyI9SBozYcfS5bUNxKCjaTxPrdWSr?usp=sharing) using Diffusers 🧨 where we also compare our methods with the concurrent work [Align Your Steps](https://research.nvidia.com/labs/toronto-ai/AlignYourSteps/). Below is a 10-step comparison.
+  <img src="assets/comparison.jpg" alt="comparison">
 - **2024-06-03**. The repo is made easier to use. Now the pre-trained models will be automatically downloaded to `./src/dataset_name`. Some errors and typos are fixed. Detailed running scripts are provided in `launch.sh`, where we also add new scripts for evaluation of CLIP score for Stable Diffusion.
 - **2024-05-02**. Our work [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326) is accepted by ICML 2024.
 - **2024-04-05**. Our work [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094) is selected as a **Highlight** paper (Top 2.8%) by CVPR 2024!
