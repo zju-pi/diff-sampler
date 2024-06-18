@@ -15,6 +15,8 @@ Zhenyu Zhou, Defang Chen, Chun Chen, Can Wang
 - This codebase supports the pre-trained diffusion models from [EDM](https://github.com/NVlabs/edm), [ADM](https://github.com/openai/guided-diffusion), [Consistency models](https://github.com/openai/consistency_models), [LDM](https://github.com/CompVis/latent-diffusion) and [Stable Diffusion](https://github.com/CompVis/stable-diffusion). When you want to load the pre-trained diffusion models from these codebases, please refer to the corresponding codebases for package installation.
 
 ## Getting Started
+**News**: For text-to-image generation with Stable Diffusion, we provide an [example script](./example.ipynb) as well as a simplified [colab script](https://colab.research.google.com/drive/1dxyVyI9SBozYcfS5bUNxKCjaTxPrdWSr?usp=sharing) for AMED-Plugin applied on DPM-Solver++(2M) using Diffusers 🧨.
+
 Run the commands in [launch.sh](./launch.sh) for training, sampling and evaluation with recommended settings. 
 All the commands can be parallelized across multiple GPUs by adjusting ```--nproc_per_node```. 
 You can find the descriptions to all the parameters in the next section.
