@@ -116,7 +116,17 @@ $SOLVER_FLAGS $SCHEDULE_FLAGS $ADDITIONAL_FLAGS $GUIDANCE_FLAGS
 
 
 
-################# D. Evaluation #################
+################# D. Use your own time schedule with a list of timestamps #################
+# Remember to delete the space of the list!
+SOLVER_FLAGS="--solver=ipndm --afs=False"
+SCHEDULE_FLAGS="--t_steps=[80,10.9836,3.8811,1.584,0.5666,0.1698,0.002]"
+ADDITIONAL_FLAGS="--max_order=4"
+python sample.py --dataset_name="cifar10" --batch=64 --seeds="0-63" --grid=True $SOLVER_FLAGS $SCHEDULE_FLAGS $ADDITIONAL_FLAGS
+
+
+
+
+################# E. Evaluation #################
 # D.1. FID
 python fid.py calc --images="path/to/images" --ref="path/to/fid/stat"
 

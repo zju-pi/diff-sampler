@@ -1,10 +1,10 @@
+import ast
 import os
 import re
 import csv
 import click
 import tqdm
 import pickle
-import numpy as np
 import torch
 import PIL.Image
 import dnnlib
@@ -154,13 +154,14 @@ def create_model(dataset_name=None, guidance_type=None, guidance_rate=None, devi
 @click.option('--sigma_max',               help='Highest noise level  [default: varies]', metavar='FLOAT',          type=click.FloatRange(min=0, min_open=True), default=80.)
 @click.option('--schedule_type',           help='Time discretization schedule', metavar='STR',                      type=click.Choice(['polynomial', 'logsnr', 'time_uniform', 'discrete']), default='polynomial', show_default=True)
 @click.option('--schedule_rho',            help='Time step exponent', metavar='FLOAT',                              type=click.FloatRange(min=0, min_open=True), default=7, show_default=True)
+@click.option('--t_steps',                 help='Pre-specified time schedule', metavar='STR',                       type=str, default=None)
 
 # Options for saving
 @click.option('--outdir',                  help='Where to save the output images', metavar='DIR',                   type=str)
 @click.option('--grid',                    help='Whether to make grid',                                             type=bool, default=False)
 @click.option('--subdirs',                 help='Create subdirectory for every 1000 seeds',                         type=bool, default=True, is_flag=True)
 
-def main(dataset_name, max_batch_size, seeds, grid, outdir, subdirs, device=torch.device('cuda'), **solver_kwargs):
+def main(dataset_name, max_batch_size, seeds, grid, outdir, subdirs, t_steps, device=torch.device('cuda'), **solver_kwargs):
 
     dist.init()
     num_batches = ((len(seeds) - 1) // (max_batch_size * dist.get_world_size()) + 1) * dist.get_world_size()
@@ -191,10 +192,23 @@ def main(dataset_name, max_batch_size, seeds, grid, outdir, subdirs, device=torc
     if dist.get_rank() == 0:
         torch.distributed.barrier()
 
-    # Calculate the exact NFE
-    solver = solver_kwargs['solver']
+    # Get the time schedule
     solver_kwargs['sigma_min'] = net.sigma_min
     solver_kwargs['sigma_max'] = net.sigma_max
+    if t_steps is None:
+        t_steps = solver_utils.get_schedule(solver_kwargs['num_steps'], solver_kwargs['sigma_min'], solver_kwargs['sigma_max'], device=device, \
+                                            schedule_type=solver_kwargs["schedule_type"], schedule_rho=solver_kwargs["schedule_rho"], net=net)
+    else:
+        t_steps_list = ast.literal_eval(t_steps)
+        t_steps = torch.tensor(t_steps_list, device=device)
+        solver_kwargs['num_steps'] = t_steps.shape[0]
+        solver_kwargs['sigma_max'], solver_kwargs['sigma_min'] = t_steps_list[0], t_steps_list[-1]
+        solver_kwargs['schedule_type'] = solver_kwargs['schedule_rho'] = None
+        dist.print0('Pre-specified t_steps:', t_steps_list)
+    solver_kwargs['t_steps'] = t_steps
+
+    # Calculate the exact NFE
+    solver = solver_kwargs['solver']
     if solver in ['dpm', 'heun']:                           # 1 step = 2 NFE
         nfe = 2 * (solver_kwargs['num_steps'] - 1) - 1 if solver_kwargs["afs"] else 2 * (solver_kwargs['num_steps'] - 1)
     else:                                                   # 1 step = 1 NFE
@@ -222,8 +236,6 @@ def main(dataset_name, max_batch_size, seeds, grid, outdir, subdirs, device=torc
     elif solver == 'deis':
         sampler_fn = solvers.deis_sampler   # use deis_tab algorithm by default
         # Construct a matrix to store the problematic coefficients for every sampling step
-        t_steps = solver_utils.get_schedule(solver_kwargs['num_steps'], solver_kwargs['sigma_min'], solver_kwargs['sigma_max'], \
-                                            device=device, schedule_type=solver_kwargs["schedule_type"], schedule_rho=solver_kwargs["schedule_rho"])
         solver_kwargs['coeff_list'] = solver_utils.get_deis_coeff_list(t_steps, solver_kwargs['max_order'], deis_mode=solver_kwargs["deis_mode"])
 
     # Print solver settings.
@@ -241,7 +253,7 @@ def main(dataset_name, max_batch_size, seeds, grid, outdir, subdirs, device=torc
             continue
         elif key in ['prompt'] and dataset_name not in ['ms_coco']:
             continue
-        elif key in ['coeff_list']:
+        elif key in ['t_steps', 'coeff_list']:
             continue
         dist.print0(f"\t{key}: {value}")
 
@@ -263,7 +275,7 @@ def main(dataset_name, max_batch_size, seeds, grid, outdir, subdirs, device=torc
         latents = rnd.randn([batch_size, net.img_channels, net.img_resolution, net.img_resolution], device=device)
         class_labels = c = uc = None
         if net.label_dim:
-            if solver_kwargs['model_source'] == 'adm':                                              # ADM models
+            if solver_kwargs['model_source'] == 'adm':
                 class_labels = rnd.randint(net.label_dim, size=(batch_size,), device=device)
             elif solver_kwargs['model_source'] == 'ldm' and dataset_name == 'ms_coco':
                 if solver_kwargs['prompt'] is None:

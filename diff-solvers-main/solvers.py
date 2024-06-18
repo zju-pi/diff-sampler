@@ -30,6 +30,8 @@ def euler_sampler(
     afs=False, 
     denoise_to_zero=False, 
     return_inters=False, 
+    return_eps=False, 
+    t_steps=None,
     **kwargs
 ):  
     """
@@ -53,16 +55,19 @@ def euler_sampler(
         afs: A `bool`. Whether to use analytical first step (AFS) at the beginning of sampling.
         denoise_to_zero: A `bool`. Whether to denoise the sample to from `sigma_min` to `0` at the end of sampling.
         return_inters: A `bool`. Whether to save intermediate results, i.e. the whole sampling trajectory.
+        return_eps: A `bool`. Whether to save intermediate d_cur, i.e. the gradient.
     Returns:
         A pytorch tensor. A batch of generated samples or sampling trajectories if return_inters=True.
     """
 
-    # Time step discretization.
-    t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
+    if t_steps is None:
+        # Time step discretization.
+        t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
 
     # Main sampling loop.
     x_next = latents * t_steps[0]
     inters = [x_next.unsqueeze(0)]
+    inters_eps = []
     for i, (t_cur, t_next) in enumerate(zip(t_steps[:-1], t_steps[1:])):   # 0, ..., N-1
         x_cur = x_next
 
@@ -76,6 +81,8 @@ def euler_sampler(
         x_next = x_cur + (t_next - t_cur) * d_cur
         if return_inters:
             inters.append(x_next.unsqueeze(0))
+        if return_eps:
+            inters_eps.append(d_cur.unsqueeze(0))
     
     if denoise_to_zero:
         x_next = get_denoised(net, x_next, t_next, class_labels=class_labels, condition=condition, unconditional_condition=unconditional_condition)
@@ -83,6 +90,8 @@ def euler_sampler(
             inters.append(x_next.unsqueeze(0))
     
     if return_inters:
+        if return_eps:
+            return torch.cat(inters, dim=0).to(latents.device), torch.cat(inters_eps, dim=0).to(latents.device)
         return torch.cat(inters, dim=0).to(latents.device)
     return x_next
 
@@ -102,7 +111,9 @@ def heun_sampler(
     schedule_rho=7, 
     afs=False, 
     denoise_to_zero=False, 
-    return_inters=False, 
+    return_inters=False,
+    return_eps=False, 
+    t_steps=None, 
     **kwargs
 ):
     """
@@ -126,16 +137,19 @@ def heun_sampler(
         afs: A `bool`. Whether to use analytical first step (AFS) at the beginning of sampling.
         denoise_to_zero: A `bool`. Whether to denoise the sample to from `sigma_min` to `0` at the end of sampling.
         return_inters: A `bool`. Whether to save intermediate results, i.e. the whole sampling trajectory.
+        return_eps: A `bool`. Whether to save intermediate d_cur, i.e. the gradient.
     Returns:
         A pytorch tensor. A batch of generated samples or sampling trajectories if return_inters=True.
     """
 
-    # Time step discretization.
-    t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
+    if t_steps is None:
+        # Time step discretization.
+        t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
 
     # Main sampling loop.
     x_next = latents * t_steps[0]
     inters = [x_next.unsqueeze(0)]
+    inters_eps = []
     for i, (t_cur, t_next) in enumerate(zip(t_steps[:-1], t_steps[1:])):                # 0, ..., N-1
         x_cur = x_next
 
@@ -154,6 +168,8 @@ def heun_sampler(
         x_next = x_cur + (t_next - t_cur) * (0.5 * d_cur + 0.5 * d_prime)
         if return_inters:
             inters.append(x_next.unsqueeze(0))
+        if return_eps:
+            inters_eps.append(d_cur.unsqueeze(0))
 
     if denoise_to_zero:
         x_next = get_denoised(net, x_next, t_next, class_labels=class_labels, condition=condition, unconditional_condition=unconditional_condition)
@@ -161,6 +177,8 @@ def heun_sampler(
             inters.append(x_next.unsqueeze(0))
 
     if return_inters:
+        if return_eps:
+            return torch.cat(inters, dim=0).to(latents.device), torch.cat(inters_eps, dim=0).to(latents.device)
         return torch.cat(inters, dim=0).to(latents.device)
     return x_next
 
@@ -181,7 +199,9 @@ def dpm_2_sampler(
     afs=False, 
     denoise_to_zero=False, 
     return_inters=False, 
+    return_eps=False, 
     r=0.5, 
+    t_steps=None,
     **kwargs
 ):
     """
@@ -205,17 +225,20 @@ def dpm_2_sampler(
         afs: A `bool`. Whether to use analytical first step (AFS) at the beginning of sampling.
         denoise_to_zero: A `bool`. Whether to denoise the sample to from `sigma_min` to `0` at the end of sampling.
         return_inters: A `bool`. Whether to save intermediate results, i.e. the whole sampling trajectory.
+        return_eps: A `bool`. Whether to save intermediate d_cur, i.e. the gradient.
         r: A `float`. The hyperparameter controlling the location of the intermediate time step. r=0.5 recovers the original DPM-Solver-2.
     Returns:
         A pytorch tensor. A batch of generated samples or sampling trajectories if return_inters=True.
     """
 
-    # Time step discretization.
-    t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
+    if t_steps is None:
+        # Time step discretization.
+        t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
     
     # Main sampling loop.
     x_next = latents * t_steps[0]
     inters = [x_next.unsqueeze(0)]
+    inters_eps = []
     for i, (t_cur, t_next) in enumerate(zip(t_steps[:-1], t_steps[1:])):                # 0, ..., N-1
         x_cur = x_next
         
@@ -235,6 +258,8 @@ def dpm_2_sampler(
         x_next = x_cur + (t_next - t_cur) * ((1 / (2*r)) * d_prime + (1 - 1 / (2*r)) * d_cur)
         if return_inters:
             inters.append(x_next.unsqueeze(0))
+        if return_eps:
+            inters_eps.append(d_cur.unsqueeze(0))
 
     if denoise_to_zero:
         x_next = get_denoised(net, x_next, t_next, class_labels=class_labels, condition=condition, unconditional_condition=unconditional_condition)
@@ -242,6 +267,8 @@ def dpm_2_sampler(
             inters.append(x_next.unsqueeze(0))
 
     if return_inters:
+        if return_eps:
+            return torch.cat(inters, dim=0).to(latents.device), torch.cat(inters_eps, dim=0).to(latents.device)
         return torch.cat(inters, dim=0).to(latents.device)
     return x_next
 
@@ -262,7 +289,9 @@ def ipndm_sampler(
     afs=False, 
     denoise_to_zero=False, 
     return_inters=False, 
+    return_eps=False, 
     max_order=4, 
+    t_steps=None,
     **kwargs
 ):
     """
@@ -286,18 +315,21 @@ def ipndm_sampler(
         afs: A `bool`. Whether to use analytical first step (AFS) at the beginning of sampling.
         denoise_to_zero: A `bool`. Whether to denoise the sample to from `sigma_min` to `0` at the end of sampling.
         return_inters: A `bool`. Whether to save intermediate results, i.e. the whole sampling trajectory.
+        return_eps: A `bool`. Whether to save intermediate d_cur, i.e. the gradient.
         max_order: A `int`. Maximum order of the solver. 1 <= max_order <= 4
     Returns:
         A pytorch tensor. A batch of generated samples or sampling trajectories if return_inters=True.
     """
 
     assert max_order >= 1 and max_order <= 4
-    # Time step discretization.
-    t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
+    if t_steps is None:
+        # Time step discretization.
+        t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
 
     # Main sampling loop.
     x_next = latents * t_steps[0]
     inters = [x_next.unsqueeze(0)]
+    inters_eps = []
     buffer_model = []
     for i, (t_cur, t_next) in enumerate(zip(t_steps[:-1], t_steps[1:])):                # 0, ..., N-1
         x_cur = x_next
@@ -320,6 +352,8 @@ def ipndm_sampler(
             x_next = x_cur + (t_next - t_cur) * (55 * d_cur - 59 * buffer_model[-1] + 37 * buffer_model[-2] - 9 * buffer_model[-3]) / 24
         if return_inters:
             inters.append(x_next.unsqueeze(0))
+        if return_eps:
+            inters_eps.append(d_cur.unsqueeze(0))
         
         if len(buffer_model) == max_order - 1:
             for k in range(max_order - 2):
@@ -334,6 +368,8 @@ def ipndm_sampler(
             inters.append(x_next.unsqueeze(0))
 
     if return_inters:
+        if return_eps:
+            return torch.cat(inters, dim=0).to(latents.device), torch.cat(inters_eps, dim=0).to(latents.device)
         return torch.cat(inters, dim=0).to(latents.device)
     return x_next
 
@@ -354,7 +390,9 @@ def ipndm_v_sampler(
     afs=False, 
     denoise_to_zero=False, 
     return_inters=False, 
+    return_eps=False, 
     max_order=4, 
+    t_steps=None,
     **kwargs
 ):
     """
@@ -378,18 +416,21 @@ def ipndm_v_sampler(
         afs: A `bool`. Whether to use analytical first step (AFS) at the beginning of sampling.
         denoise_to_zero: A `bool`. Whether to denoise the sample to from `sigma_min` to `0` at the end of sampling.
         return_inters: A `bool`. Whether to save intermediate results, i.e. the whole sampling trajectory.
+        return_eps: A `bool`. Whether to save intermediate d_cur, i.e. the gradient.
         max_order: A `int`. Maximum order of the solver. 1 <= max_order <= 4
     Returns:
         A pytorch tensor. A batch of generated samples or sampling trajectories if return_inters=True.
     """
 
     assert max_order >= 1 and max_order <= 4
-    # Time step discretization.
-    t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
+    if t_steps is None:
+        # Time step discretization.
+        t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
 
     # Main sampling loop.
     x_next = latents * t_steps[0]
     inters = [x_next.unsqueeze(0)]
+    inters_eps = []
     buffer_model = []
     root_d = (latents.shape[1] * latents.shape[-1] ** 2) ** (0.5)
     for i, (t_cur, t_next) in enumerate(zip(t_steps[:-1], t_steps[1:])):
@@ -436,6 +477,8 @@ def ipndm_v_sampler(
             x_next = x_cur + (t_next - t_cur) * (coeff1 * d_cur + coeff2 * buffer_model[-1] + coeff3 * buffer_model[-2] + coeff4 * buffer_model[-3])
         if return_inters:
             inters.append(x_next.unsqueeze(0))
+        if return_eps:
+            inters_eps.append(d_cur.unsqueeze(0))
 
         if len(buffer_model) == max_order - 1:
             for k in range(max_order - 2):
@@ -450,6 +493,8 @@ def ipndm_v_sampler(
             inters.append(x_next.unsqueeze(0))
 
     if return_inters:
+        if return_eps:
+            return torch.cat(inters, dim=0).to(latents.device), torch.cat(inters_eps, dim=0).to(latents.device)
         return torch.cat(inters, dim=0).to(latents.device)
     return x_next
 
@@ -470,8 +515,10 @@ def deis_sampler(
     afs=False, 
     denoise_to_zero=False, 
     return_inters=False, 
+    return_eps=False, 
     max_order=4, 
     coeff_list=None, 
+    t_steps=None,
     **kwargs
 ):
     """
@@ -495,6 +542,7 @@ def deis_sampler(
         afs: A `bool`. Whether to use analytical first step (AFS) at the beginning of sampling.
         denoise_to_zero: A `bool`. Whether to denoise the sample to from `sigma_min` to `0` at the end of sampling.
         return_inters: A `bool`. Whether to save intermediate results, i.e. the whole sampling trajectory.
+        return_eps: A `bool`. Whether to save intermediate d_cur, i.e. the gradient.
         max_order: A `int`. Maximum order of the solver. 1 <= max_order <= 4
         coeff_list: A `list`. The pre-calculated coefficients for DEIS sampling.
     Returns:
@@ -504,12 +552,14 @@ def deis_sampler(
     assert max_order >= 1 and max_order <= 4
     assert coeff_list is not None
     
-    # Time step discretization.
-    t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
+    if t_steps is None:
+        # Time step discretization.
+        t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
 
     # Main sampling loop.
     x_next = latents * t_steps[0]
     inters = [x_next.unsqueeze(0)]
+    inters_eps = []
     buffer_model = []
     for i, (t_cur, t_next) in enumerate(zip(t_steps[:-1], t_steps[1:])):                # 0, ..., N-1
         x_cur = x_next
@@ -535,6 +585,8 @@ def deis_sampler(
             x_next = x_cur + coeff_cur * d_cur + coeff_prev1 * buffer_model[-1] + coeff_prev2 * buffer_model[-2] + coeff_prev3 * buffer_model[-3]
         if return_inters:
             inters.append(x_next.unsqueeze(0))
+        if return_eps:
+            inters_eps.append(d_cur.unsqueeze(0))
         
         if len(buffer_model) == max_order - 1:
             for k in range(max_order - 2):
@@ -549,6 +601,8 @@ def deis_sampler(
             inters.append(x_next.unsqueeze(0))
 
     if return_inters:
+        if return_eps:
+            return torch.cat(inters, dim=0).to(latents.device), torch.cat(inters_eps, dim=0).to(latents.device)
         return torch.cat(inters, dim=0).to(latents.device)
     return x_next
 
@@ -570,9 +624,11 @@ def dpm_pp_sampler(
     afs=False, 
     denoise_to_zero=False, 
     return_inters=False, 
+    return_eps=False, 
     max_order=3, 
     predict_x0=True, 
     lower_order_final=True, 
+    t_steps=None,
     **kwargs
 ):
     """
@@ -596,6 +652,7 @@ def dpm_pp_sampler(
         afs: A `bool`. Whether to use analytical first step (AFS) at the beginning of sampling.
         denoise_to_zero: A `bool`. Whether to denoise the sample to from `sigma_min` to `0` at the end of sampling.
         return_inters: A `bool`. Whether to save intermediate results, i.e. the whole sampling trajectory.
+        return_eps: A `bool`. Whether to save intermediate d_cur, i.e. the gradient.
         max_order: A `int`. Maximum order of the solver. 1 <= max_order <= 3
         predict_x0: A `bool`. Whether to use the data prediction formulation. 
         lower_order_final: A `bool`. Whether to lower the order at the final stages of sampling. 
@@ -604,12 +661,14 @@ def dpm_pp_sampler(
     """
 
     assert max_order >= 1 and max_order <= 3
-    # Time step discretization.
-    t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
+    if t_steps is None:
+        # Time step discretization.
+        t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
 
     # Main sampling loop.
     x_next = latents * t_steps[0]
     inters = [x_next.unsqueeze(0)]
+    inters_eps = []
     buffer_model = []
     buffer_t = []
     for i, (t_cur, t_next) in enumerate(zip(t_steps[:-1], t_steps[1:])):                # 0, ..., N-1
@@ -632,6 +691,8 @@ def dpm_pp_sampler(
         x_next = dpm_pp_update(x_cur, buffer_model, buffer_t, t_next, order, predict_x0=predict_x0)
         if return_inters:
             inters.append(x_next.unsqueeze(0))
+        if return_eps:
+            inters_eps.append(d_cur.unsqueeze(0))
 
         if len(buffer_model) >= 3:
             buffer_model = [a.detach() for a in buffer_model[-3:]]
@@ -646,6 +707,8 @@ def dpm_pp_sampler(
             inters.append(x_next.unsqueeze(0))
 
     if return_inters:
+        if return_eps:
+            return torch.cat(inters, dim=0).to(latents.device), torch.cat(inters_eps, dim=0).to(latents.device)
         return torch.cat(inters, dim=0).to(latents.device)
     return x_next
 
@@ -666,10 +729,12 @@ def unipc_sampler(
     afs=False, 
     denoise_to_zero=False, 
     return_inters=False, 
+    return_eps=False, 
     max_order=3, 
     predict_x0=True, 
     lower_order_final=True, 
     variant='bh2',
+    t_steps=None,
     **kwargs
 ):
     """
@@ -704,8 +769,9 @@ def unipc_sampler(
     assert max_order > 0 and max_order < 4
     max_order = max_order
     
-    # Time step discretization.
-    t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
+    if t_steps is None:
+        # Time step discretization.
+        t_steps = get_schedule(num_steps, sigma_min, sigma_max, device=latents.device, schedule_type=schedule_type, schedule_rho=schedule_rho, net=net)
 
     # Main sampling loop.
     x_next = latents * t_steps[0]
