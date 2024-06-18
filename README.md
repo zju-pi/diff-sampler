@@ -4,13 +4,19 @@ This repository also includes (or will include) the official implementations of 
 
 - [ ] [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947)
 - [x] [CVPR 2024] [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094)
-- [ ] [ICML 2024] [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326)
+- [x] [ICML 2024] [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326)
 
 ## News
+- **2024-06-18**. The official implementation of the paper [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326) is released in [gits-main](./gits-main/). This new repo is built on the basis of [diff-solvers-main](./diff-solvers-main/), supporting baseline sampling as well as customized time schedule. Our method (GITS) offers a more efficient time schedule for fast sampling of diffusion models.
 - **2024-06-03**. The repo is made easier to use. Now the pre-trained models will be automatically downloaded to `./src/dataset_name`. Some errors and typos are fixed. Detailed running scripts are provided in `launch.sh`, where we also add new scripts for evaluation of CLIP score for Stable Diffusion.
 - **2024-05-02**. Our work [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326) is accepted by ICML 2024.
-- **2024-03-25**. The official implementation of the paper [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](./amed-solver-main/) and a [toolbox](./diff-solvers-main/) for fast sampling of diffusion models is released. We upload the reference statistics for FID evaluation [here](https://drive.google.com/drive/folders/1f8qf5qtUewCdDrkExK_Tk5-qC-fNPKpL?usp=sharing). Hope that this repo can facilitate researchers on fast sampling of diffusion models!
+- **2024-03-25**. The official implementation of the paper [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094) ([amed-solver-main](./amed-solver-main/)) and a toolbox ([diff-solvers-main](./diff-solvers-main/)) for fast sampling of diffusion models is released. We upload the reference statistics for FID evaluation [here](https://drive.google.com/drive/folders/1f8qf5qtUewCdDrkExK_Tk5-qC-fNPKpL?usp=sharing). Hope that this repo can facilitate researchers on fast sampling of diffusion models!
 - **2024-02-27**. Our work [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094) is accepted by CVPR 2024.
+
+## TODO
+- [] Give an example of AMED-Solver on Stable Diffusion using [Diffusers](https://github.com/huggingface/diffusers) 🧨.
+- [] Integrate the GITS time schedule into [ComfyUI](https://github.com/comfyanonymous/ComfyUI) and provide a ComfyUI workflow.
+- [] Release the code of [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947) for easier analysis of Diffusion Models.
 
 ## Supported Fast Samplers for Diffusion Models
 | Name | Max Order | Source | Location |
@@ -25,6 +31,7 @@ This repository also includes (or will include) the official implementations of 
 |iPNDM_v|4|The variable-step version of the Adams–Bashforth methods|[diff-solvers-main](./diff-solvers-main/)|
 |AMED-Solver|2|[Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094)|[amed-solver-main](./amed-solver-main/)|
 |AMED-Plugin|-|[Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094)|[amed-solver-main](./amed-solver-main/)|
+|GITS|-|[On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326)|[gits-main](./gits-main/)|
 
 
 ## Citation
