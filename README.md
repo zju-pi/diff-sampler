@@ -14,9 +14,9 @@ This repository also includes (or will include) the official implementations of 
 - **2024-02-27**. Our work [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094) is accepted by CVPR 2024.
 
 ## TODO
-- [] Give an example of AMED-Solver on Stable Diffusion using [Diffusers](https://github.com/huggingface/diffusers) 🧨.
-- [] Integrate the GITS time schedule into [ComfyUI](https://github.com/comfyanonymous/ComfyUI) and provide a ComfyUI workflow.
-- [] Release the code of [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947) for easier analysis of Diffusion Models.
+- [x] Give an example of AMED-Plugin on Stable Diffusion using [Diffusers](https://github.com/huggingface/diffusers) 🧨.
+- [ ] Integrate the GITS time schedule into [ComfyUI](https://github.com/comfyanonymous/ComfyUI) and provide a ComfyUI workflow.
+- [ ] Release the code of [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947) for easier analysis of Diffusion Models.
 
 ## Supported Fast Samplers for Diffusion Models
 | Name | Max Order | Source | Location |

@@ -27,7 +27,6 @@ warnings.filterwarnings('ignore', 'Grad strides do not match bucket view strides
 @click.option('--M',                help='Steps to insert between two adjacent steps', metavar='INT',  type=click.IntRange(min=1), default=1, show_default=True)
 @click.option('--guidance_type',    help='Guidance type',                                              type=click.Choice(['cg', 'cfg', 'uncond', None]), default=None, show_default=True)
 @click.option('--guidance_rate',    help='Guidance rate', metavar='FLOAT',                             type=float, default=0.)
-@click.option('--classifier_path',  help='Path to pre-trained classifier model', metavar='DIR',        type=str)
 @click.option('--schedule_type',    help='Time discretization schedule', metavar='STR',                type=click.Choice(['polynomial', 'logsnr', 'time_uniform', 'discrete']), default='polynomial', show_default=True)
 @click.option('--schedule_rho',     help='Time step exponent', metavar='FLOAT',                        type=click.FloatRange(min=0), default=7, show_default=True)
 @click.option('--afs',              help='Whether to use afs', metavar='BOOL',                         type=bool, default=True, show_default=True)
@@ -82,7 +81,7 @@ def main(**kwargs):
     c.snapshot_ticks = c.total_kimg     # 1 snapshots
     c.state_dump_ticks = c.total_kimg   # 1 dump
     c.update(dataset_name=opts.dataset_name, batch_size=opts.batch, batch_gpu=opts.batch_gpu, gpus=dist.get_world_size(), cudnn_benchmark=opts.bench)
-    c.update(guidance_type=opts.guidance_type, guidance_rate=opts.guidance_rate, classifier_path=opts.classifier_path, prompt_path=opts.prompt_path)
+    c.update(guidance_type=opts.guidance_type, guidance_rate=opts.guidance_rate, prompt_path=opts.prompt_path)
     
     # Random seed.
     if opts.seed is not None:
