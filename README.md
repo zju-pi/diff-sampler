@@ -1,8 +1,9 @@
 # diff-sampler
-diff-sampler is an open source toolbox for fast sampling of diffusion models, with various model implementations, numerical-based solvers, time schedules and other features. 
-This repository also includes (or will include) the official implementations of the following works:
+diff-sampler is an open-source toolbox for fast sampling of diffusion models, to provide a fair comparison of existing approaches and help researchers to develp better approaches. diff-sampler contains various model implementations, numerical-based solvers, time schedules, and other features.  
 
-- [ ] [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947)
+This repository also includes (or will include) the official implementations of our following works:
+
+- [ ] [arXiv 2023] [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947)
 - [x] [CVPR 2024] [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094)
 - [x] [ICML 2024] [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326)
 
@@ -10,11 +11,12 @@ This repository also includes (or will include) the official implementations of 
 - **2024-06-18**. The official implementation of the paper [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326) is released in [gits-main](./gits-main/). This new repo is built on the basis of [diff-solvers-main](./diff-solvers-main/), supporting baseline sampling as well as customized time schedule. Our method (GITS) offers a more efficient time schedule for fast sampling of diffusion models.
 - **2024-06-03**. The repo is made easier to use. Now the pre-trained models will be automatically downloaded to `./src/dataset_name`. Some errors and typos are fixed. Detailed running scripts are provided in `launch.sh`, where we also add new scripts for evaluation of CLIP score for Stable Diffusion.
 - **2024-05-02**. Our work [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326) is accepted by ICML 2024.
+- **2024-04-05**. Our work [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094) is selected as a **Highlight** paper (Top 2.8%) by CVPR 2024!
 - **2024-03-25**. The official implementation of the paper [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094) ([amed-solver-main](./amed-solver-main/)) and a toolbox ([diff-solvers-main](./diff-solvers-main/)) for fast sampling of diffusion models is released. We upload the reference statistics for FID evaluation [here](https://drive.google.com/drive/folders/1f8qf5qtUewCdDrkExK_Tk5-qC-fNPKpL?usp=sharing). Hope that this repo can facilitate researchers on fast sampling of diffusion models!
 - **2024-02-27**. Our work [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094) is accepted by CVPR 2024.
 
 ## TODO
-- [x] Give an example of AMED-Plugin on Stable Diffusion using [Diffusers](https://github.com/huggingface/diffusers) 🧨.
+- [x] Give an example of AMED-Plugin on Stable Diffusion using [diffusers](https://github.com/huggingface/diffusers) 🧨.
 - [ ] Integrate the GITS time schedule into [ComfyUI](https://github.com/comfyanonymous/ComfyUI) and provide a ComfyUI workflow.
 - [ ] Release the code of [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947) for easier analysis of Diffusion Models.
 
@@ -35,15 +37,9 @@ This repository also includes (or will include) the official implementations of 
 
 
 ## Citation
-If you find this repository useful, please consider citing the following paper:
+If you find this repository useful, please consider citing the following paper (reverse chronological order):
 
-```
-@article{zhou2023fast,
-  title={Fast ODE-based Sampling for Diffusion Models in Around 5 Steps},
-  author={Zhou, Zhenyu and Chen, Defang and Wang, Can and Chen, Chun},
-  journal={arXiv preprint arXiv:2312.00094},
-  year={2023}
-}
+```bibtex
 
 @article{chen2024trajectory,
   title={On the Trajectory Regularity of ODE-based Diffusion Sampling},
@@ -51,4 +47,19 @@ If you find this repository useful, please consider citing the following paper:
   journal={arXiv preprint arXiv:2405.11326},
   year={2024}
 }
+
+@article{zhou2023fast,
+  title={Fast ODE-based Sampling for Diffusion Models in Around 5 Steps},
+  author={Zhou, Zhenyu and Chen, Defang and Wang, Can and Chen, Chun},
+  journal={arXiv preprint arXiv:2312.00094},
+  year={2023}
+}
+
+@article{chen2023geometric,
+  title={A geometric perspective on diffusion models},
+  author={Chen, Defang and Zhou, Zhenyu and Mei, Jian-Ping and Shen, Chunhua and Chen, Chun and Wang, Can},
+  journal={arXiv preprint arXiv:2305.19947},
+  year={2023}
+}
+
 ```
