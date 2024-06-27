@@ -78,10 +78,9 @@ def get_dp_list(net, device, **solver_kwargs):
     num_accumulation_rounds = num_warmup // (max_batch_size + 1) + 1
     batch_gpu = max_batch_size // dist.get_world_size()
     dist.print0(f'Accumulate {num_accumulation_rounds} rounds to collect {num_warmup} trajectories...')
+    cost_mat = torch.zeros((num_steps_tea, num_steps_tea), device=device)
     for r in range(num_accumulation_rounds):
         with torch.no_grad():
-            cost_mat = torch.zeros((num_steps_tea, num_steps_tea), device=device)
-            
             # Generate latents and labels
             latents = torch.randn([batch_gpu, net.img_channels, net.img_resolution, net.img_resolution], device=device)
             class_labels = c = uc = None
@@ -122,13 +121,13 @@ def get_dp_list(net, device, **solver_kwargs):
                     t_next = t_steps[j]
                     x_next = x_cur + (t_next - t_cur) * d_cur
                     if metric == 'l1':
-                        cost_mat[i][j] = torch.norm(x_next - teacher_traj[j], p=1, dim=(1,2,3)).mean()
+                        cost_mat[i][j] += torch.norm(x_next - teacher_traj[j], p=1, dim=(1,2,3)).mean()
                     elif metric == 'l2':
-                        cost_mat[i][j] = torch.norm(x_next - teacher_traj[j], p=2, dim=(1,2,3)).mean()
+                        cost_mat[i][j] += torch.norm(x_next - teacher_traj[j], p=2, dim=(1,2,3)).mean()
                     elif metric == 'dev':
                         temp = torch.cat((teacher_traj[0].unsqueeze(0), x_next.unsqueeze(0), teacher_traj[-1].unsqueeze(0)), dim=0)
                         dev_stu = cal_deviation(temp, net.img_channels, net.img_resolution, bs=batch_gpu).mean(dim=0)
-                        cost_mat[i][j] = dev_stu - dev_tea[j - 1]
+                        cost_mat[i][j] += (dev_stu - dev_tea[j - 1]).mean()
                     else:
                         raise NotImplementedError(f"Unknown metric: {metric}")
 
