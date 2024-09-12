@@ -3,11 +3,12 @@ diff-sampler is an open-source toolbox for fast sampling of diffusion models, to
 
 This repository also includes (or will include) the official implementations of our following works:
 
-- [ ] [arXiv 2023] [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947)
+- [x] [arXiv 2023] [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947)
 - [x] [CVPR 2024] [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094)
 - [x] [ICML 2024] [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326)
 
 ## News
+- **2024-09-12**. We release diff-analyzer as an easy toolbox for analyzing the behavior of the sampling of diffusion models. We offer the code for reproducing some observations in our works [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947) and [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326). <div style="text-align: center;"><img src="./gits-main/assets/traj_3d.png" alt="traj_regularity" width="800px"></div>
 - **2024-06-20**. GITS is integrated into [ComfyUI](https://github.com/comfyanonymous/ComfyUI) as [GITSScheduler](https://github.com/comfyanonymous/ComfyUI/blob/master/comfy_extras/nodes_gits.py)! We provide a [ComfyUI workflow](./assets/workflow-gits.json) to compare GITS with the baseline time schedule and the concurrent ICML 2024 paper [Align Your Steps: Optimizing Sampling Schedules in Diffusion Models](https://arxiv.org/abs/2404.14507). More details are included in our pull request [here](https://github.com/comfyanonymous/ComfyUI/pull/3769). <div style="text-align: center;"><img src="assets/workflow-gits.png" alt="workflow-gits" width="800px"></div>
 - **2024-06-18**. The official implementation of the paper [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326) is released in [gits-main](./gits-main/). 
   - This new repo is built on the basis of [diff-solvers-main](./diff-solvers-main/), supporting baseline sampling as well as customized time schedule. Our method (GITS) offers a more efficient time schedule for fast sampling of diffusion models.
@@ -22,7 +23,7 @@ This repository also includes (or will include) the official implementations of 
 ## TODO
 - [x] Give an example of AMED-Plugin on Stable Diffusion using [Diffusers](https://github.com/huggingface/diffusers) 🧨.
 - [x] Integrate the GITS time schedule into [ComfyUI](https://github.com/comfyanonymous/ComfyUI) and provide a ComfyUI workflow.
-- [ ] Release the code of [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947) for easier analysis of Diffusion Models.
+- [x] Release the code of [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947) for easier analysis of Diffusion Models.
 
 ## Supported Fast Samplers for Diffusion Models
 | Name | Max Order | Source | Location |
