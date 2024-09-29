@@ -7,7 +7,7 @@ import click
 import tqdm
 import torch
 from torch_utils import distributed as dist
-from training import dataset
+import dataset
 import open_clip
 from torchvision import transforms
 from torch_utils.download_util import check_file_by_key
