@@ -54,8 +54,10 @@ def download_model(url, download_path):
         try:
             unzip_file(download_path, target_dir)
             os.remove(download_path)
+            return os.path.join(target_dir, 'model.ckpt')
         except:
             raise ValueError(f"Fail to unzip the file: {download_path}")
+    return download_path
 
 #----------------------------------------------------------------------------
         
@@ -84,7 +86,7 @@ def check_file_by_key(key, subsubdir="src"):
     else:
         url = urls[key]
         print(f'File does not exist, downloading from {url}')
-        download_model(url, download_path)
+        model_path = download_model(url, download_path)
 
     # Check addtional models such as the classifier and vq_f4 model
     model_path_extra = None
@@ -96,7 +98,7 @@ def check_file_by_key(key, subsubdir="src"):
         else:
             url = urls[key_extra]
             print(f'The classifier does not exist, downloading from {url}')
-            download_model(url, download_path)
+            model_path_extra = download_model(url, download_path)
     elif key in ["lsun_bedroom_ldm", "ffhq_ldm"]:    # check the vq_f4 model
         key_extra = "vq-f4"
         subsubdir = "models/ldm_models/first_stage_models/vq-f4"
@@ -106,6 +108,6 @@ def check_file_by_key(key, subsubdir="src"):
         else:
             url = urls[key_extra]
             print(f'The vq-f4 model does not exist, downloading from {url}')
-            download_model(url, download_path)
+            model_path_extra = download_model(url, download_path)
 
     return model_path, model_path_extra

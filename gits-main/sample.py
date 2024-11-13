@@ -140,7 +140,7 @@ def create_model(dataset_name=None, guidance_type=None, guidance_rate=None, devi
 @click.option('--denoise_to_zero',         help='Whether to denoise from the last time step to 0',                  type=bool, default=False)
 @click.option('--return_inters',           help='Whether to save intermediate outputs', metavar='BOOL',             type=bool, default=False)
 # Additional options for multi-step solvers, 1<=max_order<=4 for iPNDM, iPNDM_v and DEIS, 1<=max_order<=3 for DPM-Solver++ and UniPC
-@click.option('--max_order',               help='Max order for solvers', metavar='INT',                             type=click.IntRange(min=1))
+@click.option('--max_order',               help='Max order for solvers', metavar='INT',                             type=click.IntRange(min=1), default=4)
 # Additional options for DPM-Solver++ and UniPC
 @click.option('--predict_x0',              help='Whether to use data prediction mode', metavar='BOOL',              type=bool, default=True)
 @click.option('--lower_order_final',       help='Whether to lower the order at final stages', metavar='BOOL',       type=bool, default=True)
