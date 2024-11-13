@@ -6,9 +6,14 @@ This repository also includes (or will include) the official implementations of 
 - [x] [arXiv 2023] [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947)
 - [x] [CVPR 2024] [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094)
 - [x] [ICML 2024] [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326)
+- [x] [NeurIPS 2024] [Simple and Fast Distillation of Diffusion Models](https://arxiv.org/abs/2409.19681)
 
 ## News
-<!-- - **2024-10-01**. Our new work [Simple and Fast Distillation of Diffusion Models](https://arxiv.org/abs/2409.19681) is accepted by NeurIPS 2024. The official implementation is released in [sfd-main](./sfd-main/). -->
+- **2024-11-13**. The official implementation of the paper [Simple and Fast Distillation of Diffusion Models](https://arxiv.org/abs/2409.19681) is released in [sfd-main](./sfd-main/). We simplify and accelerate the distillation of Diffusion Models. The proposed method accelerates the fine-tuning up to 1000 times while preserving high-quality few-step image generation. 
+  <div style="display: flex; justify-content: center;">
+    <img src="./sfd-main/assets/teaser.png" alt="teaser" width="320" style="margin-right: 5pt;">
+    <img src="./sfd-main/assets/distilled_traj.png" alt="teaser" width="340" style="margin-left: 5pt;">
+  </div>
 - **2024-10-01**. Our new work [Simple and Fast Distillation of Diffusion Models](https://arxiv.org/abs/2409.19681) is accepted by NeurIPS 2024! We will release the code as soon as possible.
 - **2024-09-12**. We release diff-analyzer as an easy toolbox for analyzing the behavior of the sampling of diffusion models. We offer the code for reproducing some observations in our works [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947) and [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326). <div style="text-align: center;"><img src="./gits-main/assets/traj_3d.png" alt="traj_regularity" width="800px"></div>
 - **2024-06-20**. GITS is integrated into [ComfyUI](https://github.com/comfyanonymous/ComfyUI) as [GITSScheduler](https://github.com/comfyanonymous/ComfyUI/blob/master/comfy_extras/nodes_gits.py)! We provide a [ComfyUI workflow](./assets/workflow-gits.json) to compare GITS with the baseline time schedule and the concurrent ICML 2024 paper [Align Your Steps: Optimizing Sampling Schedules in Diffusion Models](https://arxiv.org/abs/2404.14507). More details are included in our pull request [here](https://github.com/comfyanonymous/ComfyUI/pull/3769). <div style="text-align: center;"><img src="assets/workflow-gits.png" alt="workflow-gits" width="800px"></div>
