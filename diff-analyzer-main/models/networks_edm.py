@@ -579,6 +579,7 @@ class CGPrecond(torch.nn.Module):
         self.model = model
         self.classifier = classifier
         self.guidance_rate = guidance_rate
+        self.use_fp16 = use_fp16
 
     def forward(self, x, sigma, class_labels=None, force_fp32=False, y=None, **model_kwargs):
         dtype = torch.float16 if (self.use_fp16 and not force_fp32 and x.device.type == 'cuda') else torch.float32
