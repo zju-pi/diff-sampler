@@ -1,5 +1,5 @@
 # diff-sampler
-diff-sampler is an open-source toolbox for fast sampling of diffusion models, to provide a fair comparison of existing approaches and help researchers to develp better approaches. diff-sampler contains various model implementations, numerical-based solvers, time schedules, and other features.  
+diff-sampler is an open-source toolbox for fast sampling of diffusion models, providing a fair comparison of existing approaches and help researchers develp better approaches. diff-sampler contains various model implementations, numerical-based solvers, time schedules, and other features.  
 
 This repository also includes (or will include) the official implementations of our following works:
 
@@ -9,7 +9,7 @@ This repository also includes (or will include) the official implementations of 
 - [x] [NeurIPS 2024] [Simple and Fast Distillation of Diffusion Models](https://arxiv.org/abs/2409.19681)
 
 ## News
-- **2024-11-13**. The official implementation of the paper [Simple and Fast Distillation of Diffusion Models](https://arxiv.org/abs/2409.19681) is released in [sfd-main](./sfd-main/). We simplify and accelerate the distillation of Diffusion Models. The proposed method accelerates the fine-tuning up to 1000 times while preserving high-quality few-step image generation. 
+- **2024-11-13**. The official implementation of the paper [Simple and Fast Distillation of Diffusion Models](https://arxiv.org/abs/2409.19681) is released in [sfd-main](./sfd-main/). We simplify and accelerate the distillation of Diffusion Models. The proposed method accelerates the fine-tuning up to 1,000 times while preserving high-quality few-step image generation. 
   <div style="display: flex; justify-content: center;">
     <img src="./sfd-main/assets/teaser.png" alt="teaser" width="320" style="margin-right: 5pt;">
     <img src="./sfd-main/assets/distilled_traj.png" alt="teaser" width="340" style="margin-left: 5pt;">
@@ -26,11 +26,6 @@ This repository also includes (or will include) the official implementations of 
 - **2024-04-05**. Our work [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094) is selected as a **Highlight** paper (Top 2.8%) by CVPR 2024!
 - **2024-03-25**. The official implementation of the paper [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094) ([amed-solver-main](./amed-solver-main/)) and a toolbox ([diff-solvers-main](./diff-solvers-main/)) for fast sampling of diffusion models is released. We upload the reference statistics for FID evaluation [here](https://drive.google.com/drive/folders/1f8qf5qtUewCdDrkExK_Tk5-qC-fNPKpL?usp=sharing). Hope that this repo can facilitate researchers on fast sampling of diffusion models!
 - **2024-02-27**. Our work [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094) is accepted by CVPR 2024.
-
-## TODO
-- [x] Give an example of AMED-Plugin on Stable Diffusion using [Diffusers](https://github.com/huggingface/diffusers) 🧨.
-- [x] Integrate the GITS time schedule into [ComfyUI](https://github.com/comfyanonymous/ComfyUI) and provide a ComfyUI workflow.
-- [x] Release the code of [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947) for easier analysis of Diffusion Models.
 
 ## Supported Fast Samplers for Diffusion Models
 | Name | Max Order | Source | Location |
@@ -52,6 +47,13 @@ This repository also includes (or will include) the official implementations of 
 If you find this repository useful, please consider citing the following paper (reverse chronological order):
 
 ```bibtex
+
+@article{zhou2024simple,
+  title={Simple and Fast Distillation of Diffusion Models},
+  author={Zhou, Zhenyu and Chen, Defang and Wang, Can and Chen, Chun and Lyu, Siwei},
+  journal={arXiv preprint arXiv:2409.19681},
+  year={2024}
+}
 
 @article{chen2024trajectory,
   title={On the Trajectory Regularity of ODE-based Diffusion Sampling},
