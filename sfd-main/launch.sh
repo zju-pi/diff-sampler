@@ -12,7 +12,7 @@ torchrun --standalone --nproc_per_node=4 --master_port=12345 train.py \
 
 # Train SFD-v (NFE-variable version, allow sampling for num_steps within 4 to 7, a.k.a. NFE within 2 to 5, using one model)
 torchrun --standalone --nproc_per_node=4 --master_port=12345 train.py \
---dataset_name="cifar10" --total_kimg=200 --batch=128 --lr=5e-5 \
+--dataset_name="cifar10" --total_kimg=800 --batch=128 --lr=5e-5 \
 --num_steps=4 --M=3 --afs=True --sampler_tea="dpmpp" --max_order=3 --predict_x0=True --lower_order_final=True \
 --schedule_type="polynomial" --schedule_rho=7 --use_step_condition=True --is_second_stage=False
 
