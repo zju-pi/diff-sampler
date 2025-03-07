@@ -77,3 +77,8 @@ If you find this repository useful, please consider citing the following paper (
 }
 
 ```
+
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=zju-pi/diff-sampler&type=Date)](https://star-history.com/#zju-pi/diff-sampler&Date)
