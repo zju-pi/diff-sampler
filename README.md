@@ -1,5 +1,5 @@
 # diff-sampler
-diff-sampler is an open-source toolbox for fast sampling of diffusion models, providing a fair comparison of existing approaches and help researchers develp better approaches. diff-sampler contains various model implementations, numerical-based solvers, time schedules, and other features.  
+diff-sampler is an open-source toolbox designed for fast sampling of diffusion-based generative models. It enables a fair comparison among existing approaches and helps researchers develp better algorithms. diff-sampler supports a wide range of model implementations, numerical solvers, time schedules, and other advanced features.  
 
 This repository also includes (or will include) the official implementations of our following works:
 
@@ -7,8 +7,10 @@ This repository also includes (or will include) the official implementations of 
 - [x] [CVPR 2024] [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094)
 - [x] [ICML 2024] [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326)
 - [x] [NeurIPS 2024] [Simple and Fast Distillation of Diffusion Models](https://arxiv.org/abs/2409.19681)
+- [ ] [JSTAT 2025] [Geometric Regularity in Deterministic Sampling of Diffusion-based Generative Models](https://arxiv.org/abs/2506.10177) 
 
 ## News
+- **2025-10-17**. Our paper [Geometric Regularity in Deterministic Sampling of Diffusion-based Generative Models](https://arxiv.org/abs/2506.10177) got accepted for publication in _J. Stat. Mech._ 2025, a prestigious journal in statistical physics.
 - **2024-11-13**. The official implementation of the paper [Simple and Fast Distillation of Diffusion Models](https://arxiv.org/abs/2409.19681) is released in [sfd-main](./sfd-main/). We simplify and accelerate the distillation of Diffusion Models. The proposed method accelerates the fine-tuning up to 1,000 times while preserving high-quality few-step image generation. 
   <div style="display: flex; justify-content: center;">
     <img src="./sfd-main/assets/teaser.png" alt="teaser" width="320" style="margin-right: 5pt;">
@@ -47,6 +49,13 @@ This repository also includes (or will include) the official implementations of 
 If you find this repository useful, please consider citing the following paper (reverse chronological order):
 
 ```bibtex
+
+@article{chen2025geometric,
+  title={Geometric Regularity in Deterministic Sampling of Diffusion-based Generative Models},
+  author={Chen, Defang and Zhou, Zhenyu and Wang, Can and Lyu, Siwei},
+  journal={arXiv preprint arXiv:2506.10177},
+  year={2025}
+}
 
 @article{zhou2024simple,
   title={Simple and Fast Distillation of Diffusion Models},
