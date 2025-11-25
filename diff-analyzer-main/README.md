@@ -3,6 +3,7 @@ diff-analyzer is an open source toolbox for analyzing the behavior of the sampli
 
 - [arXiv 2023] [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947)
 - [ICML 2024] [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326)
+- [JSTAT 2025] [Geometric Regularity in Deterministic Sampling of Diffusion-based Generative Models](https://arxiv.org/abs/2506.10177) 
 
 ## Requirements
 - To install the required packages, please refer to the [EDM](https://github.com/NVlabs/edm) codebase.
@@ -11,6 +12,7 @@ diff-analyzer is an open source toolbox for analyzing the behavior of the sampli
 ## Getting Started
 - ``main.ipynb`` is designed for quick experiments where we only sample several batches for evaluation.
 - ``main_mp.ipynb`` is designed for large scale ones where we collect statistics of 50,000 images for more accurate evaluation. It supports **parallel computing** with multiple GPUs using 🤗 Accelerate. The obtained statistics will be saved at ``./outputs``.
+- ``main_extend.ipynb`` includes extended experimental results including sampling with approximated scores, trajectory calibration and calculation of curvature and torsion.
 
 ## Useful Sources
 We provide the required sources (if needed) like processed cifar10 dataset as well as FID statistics [here](https://drive.google.com/drive/folders/1f8qf5qtUewCdDrkExK_Tk5-qC-fNPKpL?).
@@ -19,6 +21,12 @@ We provide the required sources (if needed) like processed cifar10 dataset as we
 If you find this repository useful, please consider citing the following paper (reverse chronological order):
 
 ```bibtex
+@article{chen2025geometric,
+  title={Geometric Regularity in Deterministic Sampling of Diffusion-based Generative Models},
+  author={Chen, Defang and Zhou, Zhenyu and Wang, Can and Lyu, Siwei},
+  journal={arXiv preprint arXiv:2506.10177},
+  year={2025}
+}
 
 @article{chen2024trajectory,
   title={On the Trajectory Regularity of ODE-based Diffusion Sampling},

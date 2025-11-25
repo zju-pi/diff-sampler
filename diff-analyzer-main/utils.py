@@ -156,19 +156,22 @@ def fid_prepare(ref_stat_path, inceptionV3_path, device, accelerator=None):
 
 #----------------------------------------------------------------------------
 
-def cifar10_prepare(path_to_cifar10, device, accelerator=None):
+def cifar10_prepare(path_to_cifar10, device, accelerator=None, return_labels=False):
     dist.print0('Loading CIFAR-10 dataset...') if accelerator is None else accelerator.print('Loading CIFAR-10 dataset...')
-    dataset_kwargs = dnnlib.EasyDict(class_name='dataset.ImageFolderDataset', path=path_to_cifar10, use_labels=False, cache=True, resolution=32, max_size=50000)
-    data_loader_kwargs = dnnlib.EasyDict(pin_memory=True, num_workers=4, prefetch_factor=2)
+    dataset_kwargs = dnnlib.EasyDict(class_name='dataset.ImageFolderDataset', path=path_to_cifar10, use_labels=True, cache=False, resolution=32, max_size=50000)
+    data_loader_kwargs = dnnlib.EasyDict(pin_memory=True, num_workers=1, prefetch_factor=1)
     dataset_obj = dnnlib.util.construct_class_by_name(**dataset_kwargs) # subclass of training.dataset.Dataset
     dataset_sampler = misc.InfiniteSampler(dataset=dataset_obj, rank=dist.get_rank(), num_replicas=dist.get_world_size(), seed=0, shuffle=False)
     dataset_iterator = iter(torch.utils.data.DataLoader(dataset=dataset_obj, sampler=dataset_sampler, batch_size=50000, **data_loader_kwargs))
 
-    cifar10_dataset, _ = next(dataset_iterator)
+    cifar10_dataset, labels = next(dataset_iterator)
     cifar10_dataset = cifar10_dataset.to(device).to(torch.float32) / 127.5 - 1
     dist.print0(f'Finished.') if accelerator is None else accelerator.print(f'Finished.')
 
-    return cifar10_dataset
+    if return_labels:
+        return dataset, labels
+    else:
+        return dataset
 
 #----------------------------------------------------------------------------
 

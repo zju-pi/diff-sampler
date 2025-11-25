@@ -7,9 +7,10 @@ This repository also includes (or will include) the official implementations of 
 - [x] [CVPR 2024] [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094)
 - [x] [ICML 2024] [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326)
 - [x] [NeurIPS 2024] [Simple and Fast Distillation of Diffusion Models](https://arxiv.org/abs/2409.19681)
-- [ ] [JSTAT 2025] [Geometric Regularity in Deterministic Sampling of Diffusion-based Generative Models](https://arxiv.org/abs/2506.10177) 
+- [x] [JSTAT 2025] [Geometric Regularity in Deterministic Sampling of Diffusion-based Generative Models](https://arxiv.org/abs/2506.10177) 
 
 ## News
+- **2025-11-25**. The official implementation of the paper [Geometric Regularity in Deterministic Sampling of Diffusion-based Generative Models](https://arxiv.org/abs/2506.10177) is released in [diff-analyzer-main](./diff-analyzer-main/main_extend.ipynb). We provide extended experimental results inlcuding sampling with apprximated scores, trajectory calibration and calculation of curvature and torsion.
 - **2025-10-17**. Our paper [Geometric Regularity in Deterministic Sampling of Diffusion-based Generative Models](https://arxiv.org/abs/2506.10177) got accepted for publication in _J. Stat. Mech._ 2025, a prestigious journal in statistical physics.
 - **2024-11-13**. The official implementation of the paper [Simple and Fast Distillation of Diffusion Models](https://arxiv.org/abs/2409.19681) is released in [sfd-main](./sfd-main/). We simplify and accelerate the distillation of Diffusion Models. The proposed method accelerates the fine-tuning up to 1,000 times while preserving high-quality few-step image generation. 
   <div style="display: flex; justify-content: center;">
