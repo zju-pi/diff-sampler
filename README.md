@@ -1,16 +1,16 @@
 # diff-sampler
-diff-sampler is an open-source toolbox designed for _fast sampling of diffusion-based generative models_. It enables a fair comparison among existing approaches and helps researchers develp better algorithms. diff-sampler supports a wide range of model implementations, numerical solvers, time schedules, and other advanced features.  
+diff-sampler is an open-source toolbox designed for _fast sampling of diffusion-based generative models_. It enables a fair comparison among existing approaches and helps researchers develop better algorithms. diff-sampler supports a wide range of model implementations, numerical solvers, time schedules, and other advanced features.  
 
 This repository also includes the official implementations of our following works:
 
-- [x] [arXiv 2023] [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947)
+- [x] [arXiv 2023] [A Geometric Perspective on Diffusion Models](https://arxiv.org/abs/2305.19947) (The earliest work connecting Mean Shift and Diffusion Models)
 - [x] [CVPR 2024] [Fast ODE-based Sampling for Diffusion Models in Around 5 Steps](https://arxiv.org/abs/2312.00094)
 - [x] [ICML 2024] [On the Trajectory Regularity of ODE-based Diffusion Sampling](https://arxiv.org/abs/2405.11326)
 - [x] [NeurIPS 2024] [Simple and Fast Distillation of Diffusion Models](https://arxiv.org/abs/2409.19681)
 - [x] [JSTAT 2025] [Geometric Regularity in Deterministic Sampling of Diffusion-based Generative Models](https://arxiv.org/abs/2506.10177) 
 
 ## News
-- **2025-11-25**. The official implementation of [Geometric Regularity in Deterministic Sampling of Diffusion-based Generative Models](https://arxiv.org/abs/2506.10177) has been released in [diff-analyzer-main](./diff-analyzer-main/main_extend.ipynb). We provide extended experimental results and include new features, such as sampling with approximated Gaussian scores, automatic trajectory calibration and calculation of curvature and torsion for projected sampling trajectories.
+- **2025-11-25**. The official implementation of [Geometric Regularity in Deterministic Sampling of Diffusion-based Generative Models](https://arxiv.org/abs/2506.10177) has been released in [diff-analyzer-main](./diff-analyzer-main/main_extend.ipynb). We provide extended experimental results and include new features, such as sampling with approximated Gaussian scores, automatic trajectory calibration, and calculation of curvature and torsion for projected sampling trajectories.
 - **2025-10-17**. Our paper [Geometric Regularity in Deterministic Sampling of Diffusion-based Generative Models](https://arxiv.org/abs/2506.10177) got accepted for publication in **J. Stat. Mech. 2025**, a prestigious journal in **statistical physics**.
 - **2024-11-13**. The official implementation of the paper [Simple and Fast Distillation of Diffusion Models](https://arxiv.org/abs/2409.19681) was released in [sfd-main](./sfd-main/). We simplify and accelerate the distillation of Diffusion Models. The proposed method accelerates the fine-tuning up to 1,000 times while preserving high-quality few-step image generation. 
   <div style="display: flex; justify-content: center;">
@@ -54,7 +54,7 @@ If you find this repository useful, please consider citing the following papers 
 ```bibtex
 
 @article{chen2025geometric,
-  title={Geometric Regularity in Deterministic Sampling of Diffusion-based Generative Models},
+  title={Geometric Regularity in Deterministic Sampling Dynamics of Diffusion-based Generative Models},
   author={Chen, Defang and Zhou, Zhenyu and Wang, Can and Lyu, Siwei},
   journal={arXiv preprint arXiv:2506.10177},
   year={2025}
